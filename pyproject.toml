@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "visual-task-factory"
+version = "0.1.0"
+description = "Reusable Visual Task Factory for generating, independently verifying, and benchmarking multimodal AI evaluation tasks."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "httpx>=0.27.0",
+    "matplotlib>=3.8.0",
+    "numpy>=1.26.0",
+    "pillow>=10.0.0",
+    "pydantic>=2.7.0",
+    "uvicorn>=0.30.0",
+]
+
+[project.optional-dependencies]
+gemini = ["google-genai>=1.0.0"]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+vtf = "vtf.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

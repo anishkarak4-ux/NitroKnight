@@ -1,0 +1,62 @@
+{
+  "total_mutants": 9,
+  "killed_mutants": 9,
+  "mutation_kill_rate": 1.0,
+  "all_killed": true,
+  "mutants": [
+    {
+      "mutant": "clipped_element_bbox",
+      "expected_detector": "image_integrity_and_bounds",
+      "killed": true,
+      "detail": "Out-of-bounds element bad_clip: (1050.0, 10.0, 1250.0, 90.0) outside 1120x680"
+    },
+    {
+      "mutant": "mismatched_image_dimensions",
+      "expected_detector": "image_integrity_and_bounds",
+      "killed": true,
+      "detail": "Image dims (320x200) != manifest dims (1120x680); Out-of-bounds element title: (40.0, 31.0, 727.0, 54.0) outside 320x200; Out-of-bounds element shelf_Middle: (42.0, 349.91333333333336, 110.0, 363.91333333333336) outside 320x200; Out-of-bounds element shelf_Bottom: (42.0, 533.2466666666667, 117.0, 546.2466666666667) outside 320x200; Out-of-bounds element crate_Top_0: (170.0, 104.0, 380.5, 250.3) outside 320x200; Out-of-bounds element crate_Top_1: (396.5, 104.0, 607.0, 250.3) outside 320x200; Out-of-bounds element crate_Top_3: (849.5, 104.0, 1060.0, 250.3) outside 320x200; Out-of-bounds element crate_Middle_0: (170.0, 286.3, 380.5, 432.7) outside 320x200; Out-of-bounds element crate_Middle_1: (396.5, 286.3, 607.0, 432.7) outside 320x200; Out-of-bounds element crate_Middle_2: (623.0, 286.3, 833.5, 432.7) outside 320x200; Out-of-bounds element crate_Middle_3: (849.5, 286.3, 1060.0, 432.7) outside 320x200; Out-of-bounds element crate_Bottom_0: (170.0, 468.7, 380.5, 615.0) outside 320x200; Out-of-bounds element crate_Bottom_3: (849.5, 468.7, 1060.0, 615.0) outside 320x200"
+    },
+    {
+      "mutant": "overlapping_queried_labels",
+      "expected_detector": "visual_readability_and_overlap",
+      "killed": true,
+      "detail": "Text overlap 0.74 between xtick_mutA and xtick_mutB"
+    },
+    {
+      "mutant": "tiny_unreadable_font",
+      "expected_detector": "visual_readability_and_overlap",
+      "killed": true,
+      "detail": "Font too small (6.5px) on tiny_lbl"
+    },
+    {
+      "mutant": "ungrounded_question_entity",
+      "expected_detector": "strict_qa_grounding",
+      "killed": true,
+      "detail": "Question references elements absent from image: ['ghost_crate_99']"
+    },
+    {
+      "mutant": "hidden_referenced_element",
+      "expected_detector": "strict_qa_grounding",
+      "killed": true,
+      "detail": "Referenced elements are hidden/excessively occluded: ['shelf_Bottom']"
+    },
+    {
+      "mutant": "corrupted_ground_truth_answer",
+      "expected_detector": "independent_solver_verification",
+      "killed": true,
+      "detail": "Independent solver cross-check disagreed with stored task answer."
+    },
+    {
+      "mutant": "verbatim_answer_leakage",
+      "expected_detector": "anti_shortcut_leakage_audit",
+      "killed": true,
+      "detail": "Independent solver cross-check disagreed with stored task answer.; Answer 'SecretLeakTarget' leaked verbatim inside question text."
+    },
+    {
+      "mutant": "scorer_rejects_wrong_numeric",
+      "expected_detector": "verify_prediction",
+      "killed": true,
+      "detail": "error_category=numeric_mismatch"
+    }
+  ]
+}
