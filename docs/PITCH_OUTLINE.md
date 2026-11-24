@@ -55,7 +55,7 @@ Make a copy of the Google Slides template, replace the placeholder text with eac
 ---
 
 ## Slide 6 — Wireframes / Mock Diagrams (Studio UI Screenshot)
-*(Run `vtf serve --dataset samples/demo_suite`, open `http://127.0.0.1:8000`, enable "Show Grounding Boxes", and paste a screenshot here!)*
+*(Ready-to-use live capture saved at: `docs/assets/studio_ui_screenshot.png`)*
 - Highlights:
   - Interactive **Live Generate + 5-Gate Validate** sidebar.
   - **SVG Grounding Box Overlay** highlighting referenced primitives (blue) and answer evidence (green) directly over pixels.

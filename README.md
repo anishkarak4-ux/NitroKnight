@@ -10,8 +10,8 @@ A **reusable, Dockerized, deterministic visual evaluation factory** that synthet
 |---|---|
 | **Runnable Source Code & Setup** | [src/vtf/](src/vtf/), [Dockerfile](Dockerfile), [pyproject.toml](pyproject.toml) |
 | **Sample Outputs & Findings** | [samples/demo_suite/](samples/demo_suite/) (tasks, PNGs, `benchmark_report.md`) |
-| **Validation & Mutation Evidence** | [tests/](tests/), [samples/demo_suite/mutation_report.json](samples/demo_suite/mutation_report.json), `vtf validate`, `vtf mutate` |
-| **Technical Explanation** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PITCH_OUTLINE.md](docs/PITCH_OUTLINE.md) |
+| **Validation & Mutation Evidence** | [tests/](tests/), [docs/VALIDATION_EVIDENCE.md](docs/VALIDATION_EVIDENCE.md), [samples/demo_suite/mutation_report.json](samples/demo_suite/mutation_report.json), `vtf validate`, `vtf mutate` |
+| **Technical Explanation & Deck** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PITCH_OUTLINE.md](docs/PITCH_OUTLINE.md), [docs/NitroKnight_Visual_Task_Factory_Submission.pptx](docs/NitroKnight_Visual_Task_Factory_Submission.pptx) |
 | **Demo Walkthrough Script** | [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) |
 
 ---
