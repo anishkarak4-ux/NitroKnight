@@ -19,6 +19,22 @@ from vtf.schema import AnswerType, ModelPrediction, TaskPackage
 from vtf.scoring import verify_prediction
 
 
+def load_dotenv(path: Path | str = ".env") -> None:
+    """Populate missing environment variables from a local .env file if present."""
+    env_path = Path(path)
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        k = k.strip()
+        v = v.strip().strip('"').strip("'")
+        if k and k not in os.environ and v:
+            os.environ[k] = v
+
+
 def build_vlm_prompt(task: TaskPackage) -> str:
     """Construct an unambiguous evaluation prompt for multimodal models."""
     type_hint = {
@@ -155,11 +171,16 @@ class GeminiEvaluator(BaseEvaluator):
         self,
         model_name: str = "gemini-3.6-flash",
         api_key: str | None = None,
-        timeout: float = 45.0,
+        timeout: float = 60.0,
+        max_retries: int = 5,
+        min_delay_sec: float = 1.0,
     ) -> None:
+        load_dotenv()
         self.model_name = model_name
         self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         self.timeout = timeout
+        self.max_retries = max_retries
+        self.min_delay_sec = min_delay_sec
         if not self.api_key:
             raise ValueError("Set GEMINI_API_KEY or GOOGLE_API_KEY to run GeminiEvaluator.")
 
@@ -177,10 +198,24 @@ class GeminiEvaluator(BaseEvaluator):
             ]
         }
         headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
+        data: dict[str, Any] = {}
         with httpx.Client(timeout=self.timeout) as client:
-            resp = client.post(url, json=payload, headers=headers)
-            resp.raise_for_status()
-            data = resp.json()
+            for attempt in range(self.max_retries + 1):
+                if self.min_delay_sec > 0:
+                    time.sleep(self.min_delay_sec)
+                try:
+                    resp = client.post(url, json=payload, headers=headers)
+                except (httpx.TimeoutException, httpx.TransportError):
+                    if attempt < self.max_retries:
+                        time.sleep(min(20.0, 2.0 * (2**attempt)))
+                        continue
+                    raise
+                if resp.status_code in {429, 500, 502, 503, 504} and attempt < self.max_retries:
+                    time.sleep(min(25.0, 3.0 * (2**attempt)))
+                    continue
+                resp.raise_for_status()
+                data = resp.json()
+                break
         candidates = data.get("candidates", [])
         if not candidates:
             return ""
@@ -201,6 +236,7 @@ class OpenAICompatibleEvaluator(BaseEvaluator):
         base_url: str | None = None,
         timeout: float = 45.0,
     ) -> None:
+        load_dotenv()
         self.model_name = model_name
         self.base_url = (base_url or os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
         self.api_key = (

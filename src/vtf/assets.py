@@ -37,6 +37,10 @@ def generate_slide_assets(
         _draw_baseline_chart(summary, bench_path)
         generated.append(bench_path)
 
+        fam_path = out / "model_failure_breakdown.png"
+        _draw_family_breakdown_chart(summary, fam_path)
+        generated.append(fam_path)
+
     return generated
 
 
@@ -182,7 +186,8 @@ def _draw_baseline_chart(summary: BenchmarkSummary, out_path: Path) -> None:
 
     x = np.arange(len(models))
     width = 0.34
-    fig, ax = plt.subplots(figsize=(9.2, 4.8), dpi=130)
+    fig_w = max(9.2, 2.2 * len(models))
+    fig, ax = plt.subplots(figsize=(fig_w, 5.2), dpi=130)
     try:
         fig.patch.set_facecolor("#FFFFFF")
         ax.set_facecolor("#F8FAFC")
@@ -190,9 +195,9 @@ def _draw_baseline_chart(summary: BenchmarkSummary, out_path: Path) -> None:
         b2 = ax.bar(x + width / 2, cf, width, label="Counterfactual Consistency (%)", color="#0D9488", zorder=3)
         ax.set_ylim(0, 118)
         ax.set_ylabel("Score (%)")
-        ax.set_title("Anti-Shortcut Verification & Solvability Evidence", fontsize=13, fontweight="bold")
+        ax.set_title("Model Benchmarking, Anti-Shortcut Verification & Consistency", fontsize=13, fontweight="bold")
         ax.set_xticks(x)
-        ax.set_xticklabels(models, fontsize=10)
+        ax.set_xticklabels(models, fontsize=9.5, rotation=12 if len(models) > 3 else 0)
         ax.yaxis.grid(True, linestyle="--", alpha=0.6, zorder=0)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
@@ -201,6 +206,51 @@ def _draw_baseline_chart(summary: BenchmarkSummary, out_path: Path) -> None:
                 v = bar.get_height()
                 ax.text(bar.get_x() + bar.get_width() / 2, v + 2, f"{v:.1f}%", ha="center", va="bottom", fontsize=9, fontweight="bold")
         ax.legend(loc="upper left", frameon=True)
+        fig.tight_layout()
+        fig.savefig(out_path, dpi=130)
+    finally:
+        plt.close(fig)
+
+
+def _draw_family_breakdown_chart(summary: BenchmarkSummary, out_path: Path) -> None:
+    """Plot accuracy across all 4 visual families for evaluated models (excluding oracle)."""
+    models = [m for m in summary.models_evaluated if m != "oracle_spec_verifier"]
+    if not models:
+        models = list(summary.models_evaluated)
+    families = ["charts", "spatial_inventory", "logic_circuits", "structured_docs"]
+    fam_labels = ["Charts", "Spatial / Occlusion", "Logic & Flow", "Invoices & QA"]
+    palette = ["#64748B", "#94A3B8", "#0EA5E9", "#2563EB", "#7C3AED", "#0D9488"]
+
+    x = np.arange(len(families))
+    n = len(models)
+    width = min(0.22, 0.78 / max(1, n))
+
+    fig, ax = plt.subplots(figsize=(10.4, 5.2), dpi=130)
+    try:
+        fig.patch.set_facecolor("#FFFFFF")
+        ax.set_facecolor("#F8FAFC")
+        for idx, m in enumerate(models):
+            vals = [summary.by_family.get(m, {}).get(f, 0.0) * 100 for f in families]
+            offset = (idx - (n - 1) / 2.0) * width
+            bars = ax.bar(x + offset, vals, width, label=m, color=palette[idx % len(palette)], zorder=3)
+            for b in bars:
+                v = b.get_height()
+                ax.text(b.get_x() + b.get_width() / 2, v + 1.5, f"{v:.0f}%", ha="center", va="bottom", fontsize=7.5, fontweight="bold")
+        ax.set_ylim(0, 118)
+        ax.set_ylabel("Accuracy (%)")
+        ax.set_title("Where Multimodal Models Succeed vs Struggle (Accuracy by Visual Family)", fontsize=12.5, fontweight="bold", pad=28)
+        ax.set_xticks(x)
+        ax.set_xticklabels(fam_labels, fontsize=10)
+        ax.yaxis.grid(True, linestyle="--", alpha=0.6, zorder=0)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.legend(
+            loc="lower center",
+            bbox_to_anchor=(0.5, 1.01),
+            ncol=min(4, len(models)),
+            fontsize=8.5,
+            frameon=True,
+        )
         fig.tight_layout()
         fig.savefig(out_path, dpi=130)
     finally:

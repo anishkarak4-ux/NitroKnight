@@ -41,12 +41,16 @@ Make a copy of the Google Slides template, replace the placeholder text with eac
 ---
 
 ## Slide 5 — Process Flow Diagram / Use-Case Diagram
-*(Insert image: `docs/assets/validation_and_baselines.png` or `docs/assets/architecture_diagram.png`)*
+*(Insert image: `docs/assets/model_failure_breakdown.png` or `docs/assets/validation_and_baselines.png`)*
 - **End-to-End Flow:**
   1. Select `(family, difficulty, seed)` → generate canonical JSON spec.
   2. Render image + exact `SceneManifest` pixel bounding boxes & independently compute verified answer + `solver_trace`.
   3. Filter through **5 Validation Gates** (bounds, overlap/readability, strict Q/A grounding, independent solver cross-check, anti-shortcut leakage) + generate counterfactual twin `*_cf`.
   4. Benchmark multimodal VLMs & baselines → emit accuracy breakdown (`Family × Difficulty × Reasoning`) + Counterfactual Consistency report.
+- **Key Empirical Findings (`samples/demo_suite`, 24 tasks):**
+  - `blind_text_prior`: **8.3%** overall (**0.0%** counterfactual consistency) — proves tasks cannot be cheated without pixels.
+  - `gemini-3.5-flash-lite`: **83.3%** overall (**100%** on Charts, Spatial/Occlusion, and Invoices/QA, dropping to **33.3%** on Logic Schematics & Flow Networks).
+  - `gemini-3-flash-preview`: **91.7%** overall (**100%** across all **22/22** completed calls including Logic & Flow; final 2 tasks hit free-tier 429 quota).
 
 ---
 
@@ -82,7 +86,7 @@ Make a copy of the Google Slides template, replace the placeholder text with eac
 ## Slide 10 — Hackathon Deliverables Checklist
 - **Runnable Source Code + Docker:** `https://github.com/anishkarak4-ux/NitroKnight` (includes `Dockerfile`, `pyproject.toml`, `README.md`).
 - **Sample Outputs:** Committed under `samples/demo_suite/` (24+ validated PNG tasks, JSONL specs, grounding manifests, and benchmark reports).
-- **Validation Evidence:** `pytest` suite (`100%` pass), `vtf validate`, `samples/demo_suite/mutation_report.json` (`9/9` injected faults killed), and baseline anti-shortcut proof (`8.3%` blind vs `100%` oracle).
+- **Validation Evidence:** `pytest` suite (`100%` pass), `vtf validate`, `samples/demo_suite/mutation_report.json` (`9/9` injected faults killed), and live benchmark results (`8.3%` blind vs `83.3%` `gemini-3.5-flash-lite` vs `91.7%` `gemini-3-flash-preview` vs `100%` oracle).
 - **Technical Explanation & Live Demo:** `docs/ARCHITECTURE.md` + 3–4 minute walkthrough video (`docs/DEMO_SCRIPT.md`).
 
 ---

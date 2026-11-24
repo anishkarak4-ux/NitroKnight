@@ -15,15 +15,19 @@ def extract_answer_text(raw: str, answer_type: AnswerType) -> str:
     if not text:
         return ""
 
-    # 1. JSON payload {"answer": ...}
-    json_match = re.search(r"\{[^{}]*\"answer\"\s*:\s*([^}]+)\}", text, flags=re.IGNORECASE | re.DOTALL)
-    if json_match:
+    # 1. JSON payload {"answer": ...} (search all candidates, prefer last valid JSON object)
+    for json_match in reversed(list(re.finditer(r"\{[^{}]*\"answer\"\s*:\s*[^}]+\}", text, flags=re.IGNORECASE | re.DOTALL))):
         try:
             parsed = json.loads(json_match.group(0))
-            if "answer" in parsed:
+            if "answer" in parsed and parsed["answer"] is not None:
                 return str(parsed["answer"]).strip()
         except Exception:
             pass
+
+    # 1b. Loose regex extraction for truncated JSON containing "answer": "..." or numeric
+    loose_m = re.search(r"\"answer\"\s*:\s*(?:\"([^\"]+)\"|([-+]?\d+(?:\.\d+)?|true|false))", text, flags=re.IGNORECASE)
+    if loose_m:
+        return (loose_m.group(1) or loose_m.group(2) or "").strip()
 
     # 2. Explicit tag or prefix
     for pat in (

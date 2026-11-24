@@ -22,6 +22,7 @@ def run_benchmark(
     *,
     evaluators: list[BaseEvaluator] | None = None,
     limit: int | None = None,
+    verbose: bool = False,
 ) -> BenchmarkSummary:
     """Evaluate one or more models on a validated task dataset and write reports."""
     ds_path = Path(dataset_dir)
@@ -38,10 +39,13 @@ def run_benchmark(
     preds_by_model_task: dict[str, dict[str, ModelPrediction]] = defaultdict(dict)
 
     for ev in eval_list:
-        for t in valid_tasks:
+        for idx, t in enumerate(valid_tasks, start=1):
             pred = ev.evaluate_task(t, ds_path)
             all_preds.append(pred)
             preds_by_model_task[ev.model_name][t.task_id] = pred
+            if verbose:
+                status = "OK" if pred.correct else (pred.error_category or "WRONG")
+                print(f"[{ev.model_name}] {idx}/{len(valid_tasks)} {t.task_id}: {status} (pred={pred.extracted_answer!r}, exp={pred.expected_answer!r})", flush=True)
 
     overall: dict[str, float] = {}
     by_family: dict[str, dict[str, float]] = {}
@@ -135,13 +139,16 @@ def format_markdown_report(summary: BenchmarkSummary, tasks: list[TaskPackage]) 
         "",
         "## 1. Overall Accuracy & Counterfactual Visual Consistency",
         "",
-        "| Model | Overall Accuracy | Counterfactual Consistency |",
-        "|---|---:|---:|",
+        "| Model | Overall Accuracy | Counterfactual Consistency | API Errors |",
+        "|---|---:|---:|---:|",
     ]
     for m in summary.models_evaluated:
+        api_errs = sum(
+            1 for p in summary.predictions if p.model_name == m and p.error_category == "api_error"
+        )
         lines.append(
             f"| `{m}` | {summary.overall_accuracy.get(m, 0.0)*100:.1f}% | "
-            f"{summary.counterfactual_consistency.get(m, 0.0)*100:.1f}% |"
+            f"{summary.counterfactual_consistency.get(m, 0.0)*100:.1f}% | {api_errs} |"
         )
 
     lines.extend(["", "## 2. Breakdown by Visual Family", ""])
