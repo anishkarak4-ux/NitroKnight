@@ -312,13 +312,49 @@ class OllamaVisionEvaluator(BaseEvaluator):
         return str(data["message"]["content"])
 
 
+class OllamaTextBlindBaseline(BaseEvaluator):
+    """Real text-only LLM audit (no image) via local Ollama to detect language-prior shortcuts."""
+
+    provider = "blind_llm_audit"
+    uses_image = False
+
+    def __init__(
+        self,
+        model_name: str = "mistral:latest",
+        host: str | None = None,
+        timeout: float = 45.0,
+    ) -> None:
+        self.raw_model = model_name
+        self.model_name = f"blind_llm_{model_name.replace(':', '_')}"
+        self.host = (host or os.getenv("OLLAMA_HOST") or "http://localhost:11434").rstrip("/")
+        self.timeout = timeout
+
+    def predict_raw(self, task: TaskPackage, image_path: Path) -> str:
+        prompt = (
+            "You are answering a visual benchmark question WITHOUT seeing any image.\n"
+            f"Question: {task.question}\n"
+            'Try to guess the answer anyway, or reply UNKNOWN. Respond strictly in JSON: {"answer": <guess_or_UNKNOWN>}.'
+        )
+        payload = {
+            "model": self.raw_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "options": {"temperature": 0},
+        }
+        with httpx.Client(timeout=self.timeout) as client:
+            resp = client.post(f"{self.host}/api/chat", json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+        return str(data["message"]["content"])
+
+
 def build_evaluator(spec: str) -> BaseEvaluator:
     """Factory helper from CLI model spec string.
 
     Examples:
         'blind_prior', 'pixel_heuristic', 'oracle',
-        'gemini:gemini-3.6-flash', 'openai:gpt-4o',
-        'openrouter:google/gemini-2.5-flash', 'ollama:qwen2.5vl:3b'
+        'ollama_blind:mistral:latest', 'gemini:gemini-3.5-flash-lite',
+        'openai:gpt-4o', 'openrouter:google/gemini-2.5-flash', 'ollama:qwen2.5vl:3b'
     """
     if spec == "blind_prior":
         return BlindTextPriorBaseline()
@@ -326,6 +362,8 @@ def build_evaluator(spec: str) -> BaseEvaluator:
         return PixelHeuristicBaseline()
     if spec == "oracle":
         return OracleVerifierBaseline()
+    if spec.startswith("ollama_blind:"):
+        return OllamaTextBlindBaseline(model_name=spec.split(":", 1)[1])
     if spec.startswith("gemini:"):
         return GeminiEvaluator(model_name=spec.split(":", 1)[1])
     if spec.startswith("openai:"):

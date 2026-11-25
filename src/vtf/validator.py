@@ -224,6 +224,8 @@ def _estimate_shortcut_risk(task: TaskPackage) -> tuple[float, str | None, str |
             return 1.0, ans_str, f"Answer '{ans_str}' leaked verbatim inside question text."
 
     # Estimate blind random-guess prior probability
+    if task.reasoning_type == "hallucination_abstention":
+        return 0.5, "CANNOT_DETERMINE", None
     if task.reasoning_type == "occlusion_depth_ordering":
         m = re.search(r"\(([^)]+)\s+vs\s+([^)]+)\)", task.question, flags=re.IGNORECASE)
         guess = m.group(1).strip() if m else None

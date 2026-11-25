@@ -1,16 +1,17 @@
 {
-  "valid_tasks": 24,
+  "valid_tasks": 30,
   "rejected_candidates": 0,
   "by_family": {
     "charts": 6,
     "spatial_inventory": 6,
     "logic_circuits": 6,
-    "structured_docs": 6
+    "structured_docs": 6,
+    "blueprints_gauges": 6
   },
   "by_difficulty": {
-    "easy": 8,
-    "medium": 8,
-    "hard": 8
+    "easy": 10,
+    "medium": 10,
+    "hard": 10
   },
-  "counterfactual_pairs": 12
+  "counterfactual_pairs": 15
 }

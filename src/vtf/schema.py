@@ -19,6 +19,7 @@ class FamilyName(str, Enum):
     SPATIAL_INVENTORY = "spatial_inventory"
     LOGIC_CIRCUITS = "logic_circuits"
     STRUCTURED_DOCS = "structured_docs"
+    BLUEPRINTS_GAUGES = "blueprints_gauges"
 
 
 class AnswerType(str, Enum):
@@ -144,5 +145,6 @@ class BenchmarkSummary(BaseModel):
     by_difficulty: dict[str, dict[str, float]] = Field(default_factory=dict)
     by_reasoning: dict[str, dict[str, float]] = Field(default_factory=dict)
     counterfactual_consistency: dict[str, float] = Field(default_factory=dict)
+    hallucination_rate: dict[str, float] = Field(default_factory=dict)
     predictions: list[ModelPrediction] = Field(default_factory=list)
     counterfactual_details: list[CounterfactualPairMetrics] = Field(default_factory=list)

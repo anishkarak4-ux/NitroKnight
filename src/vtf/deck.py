@@ -195,64 +195,65 @@ def build_submission_deck(out_path: Path = OUT_PPTX) -> Path:
         ],
         font_pt=12,
     )
-    _add_card(s2, 0.45, 2.85, 2.9, 2.2, "4 Visual Families", "Charts, Spatial & Occlusion, Logic Circuits & Flow DAGs, Invoices & QA Matrices across Easy / Medium / Hard.", CARD_BLUE, BLUE)
-    _add_card(s2, 3.55, 2.85, 2.9, 2.2, "5-Gate Validator + Mutants", "Verifies bounds, readability/zero overlap, strict Q/A visual grounding, solver parity, and anti-shortcut leakage (9/9 mutants killed).", CARD_GREEN, TEAL)
-    _add_card(s2, 6.65, 2.85, 2.9, 2.2, "Real VLM Diagnostics", "Evaluates Gemini Flash, OpenAI/OpenRouter & Ollama Vision vs blind text baselines with Counterfactual Consistency.", CARD_BLUE, BLUE)
+    _add_card(s2, 0.45, 2.85, 2.9, 2.2, "5 Visual Families", "Charts, Spatial & Occlusion, Crossing Logic & DAGs, Redacted Invoices/QA, and Floorplan Blueprints & Analog Gauges.", CARD_BLUE, BLUE)
+    _add_card(s2, 3.55, 2.85, 2.9, 2.2, "5-Gate + Blind LLM Audit", "Verifies bounds, zero overlap, strict Q/A grounding, solver parity, regex priors, and Ollama Mistral-7B non-shortcuttability.", CARD_GREEN, TEAL)
+    _add_card(s2, 6.65, 2.85, 2.9, 2.2, "Resumable VLM + Abstention", "Evaluates Gemini Flash/Lite, OpenAI/OpenRouter & Ollama with JSONL caching, counterfactual twins, and hallucination checks.", CARD_BLUE, BLUE)
 
     # Slide 3 — Opportunity & USP
     s3 = prs.slides.add_slide(blank)
     _add_bg(s3, content_bg, w, h)
     _add_title(s3, "Opportunity, Differentiation & USP")
     _add_bullets(
-        s3, 0.45, 1.22, 9.1, 2.0,
+        s3, 0.45, 1.22, 9.1, 2.45,
         [
-            ("Problem With Existing Benchmarks", "Static datasets (VQA v2, ChartQA, CLEVR) suffer from web pretraining leakage and text-only language priors where models guess without looking at pixels."),
-            ("Zero Diffusion Hallucination", "Programmatic Matplotlib/Pillow synthesis guarantees exact numbers, labels, wire connections, and z-order occlusion — impossible with diffusion image generators."),
-            ("Counterfactual Visual Twin Engine", "Every task emits a minimally altered twin (*_cf) that flips the answer, measuring whether VLMs actually inspect pixels rather than memorizing priors."),
-            ("Empirical Anti-Shortcut Proof", "Blind text-only baseline scores just 8.3% overall (0.0% counterfactual consistency), vs 83.3%–91.7% for Gemini Flash models and 100.0% for our symbolic verifier."),
+            ("Problem With Existing Benchmarks", "Static datasets (VQA v2, ChartQA, CLEVR) suffer from pretraining memorization, text-only priors, and false guessing when evidence is redacted."),
+            ("Zero Diffusion Hallucination", "Programmatic Matplotlib/Pillow synthesis guarantees exact measurements, doorway connectivity, wire crossings, and z-order occlusion."),
+            ("Counterfactual Twins + Redacted Abstention", "Every task emits a minimally altered twin (*_cf) that flips the answer, plus black-redacted audits expecting CANNOT_DETERMINE."),
+            ("Empirical Anti-Shortcut Proof", "Blind regex prior scores 10.0% and image-less Ollama Mistral-7B scores 0.0% (0.0% CF), vs 83.3% (Gemini 3.5 Flash-Lite, 0 errors), 95.5% completed (21/22, Gemini 3.5 Flash), and 100.0% Oracle."),
         ],
-        font_pt=11,
+        font_pt=10.8,
     )
-    _add_card(s3, 0.45, 3.85, 4.4, 1.25, "Strict Grounding Guarantee", "Every queried element and evidence region has an exact bounding box in SceneManifest (`100%` grounding coverage).", CARD_GREEN, TEAL)
-    _add_card(s3, 5.15, 3.85, 4.4, 1.25, "Judge-Ready Reproducibility", "Seeded deterministic generation + 19/19 pytest checks + 9/9 mutation fault detection + standardized Dockerfile.", CARD_BLUE, BLUE)
+    _add_card(s3, 0.45, 3.85, 4.4, 1.25, "Strict Grounding Guarantee", "Every queried element and evidence region has an exact bounding box in SceneManifest (`100%` grounding coverage across 30 tasks).", CARD_GREEN, TEAL)
+    _add_card(s3, 5.15, 3.85, 4.4, 1.25, "Judge-Ready CI & Reproducibility", "Seeded deterministic generation + 22/22 pytest checks + 9/9 mutation fault detection + GitHub Actions CI + Dockerfile.", CARD_BLUE, BLUE)
 
-    # Slide 4 — List of Features + 4-Family Showcase
+    # Slide 4 — List of Features + 5-Family Showcase
     s4 = prs.slides.add_slide(blank)
     _add_bg(s4, content_bg, w, h)
-    _add_title(s4, "Key Features & Meaningful Variation (4 Visual Families)")
+    _add_title(s4, "Key Features & Meaningful Variation (5 Visual Families)")
     _add_bullets(
         s4, 0.45, 1.25, 3.9, 3.85,
         [
-            ("1. Charts", "Grouped, stacked, line & dual-axis combo charts with unlabeled axis-reading."),
+            ("1. Charts", "OCR-proof unlabeled visual gap charts, grouped, stacked, line & dual-axis combo."),
             ("2. Spatial & Occlusion", "Warehouse inventory racks & CLEVR 2D scenes with z-order depth tests."),
-            ("3. Logic & Flow", "Multi-stage boolean schematics, fault sensitivity & open/blocked DAGs."),
-            ("4. Invoices & QA", "Checkbox filtering & cross-column arithmetic discrepancy auditing."),
-            ("5. Integrated Runner", "CLI + FastAPI Studio + counterfactual pairs + Markdown/JSON reports."),
+            ("3. Logic & Flow", "5-input dense wire-crossing schematics w/ bridge arcs, faults & flow DAGs."),
+            ("4. Invoices & Redacted", "Cross-column discrepancy auditing + redacted CANNOT_DETERMINE abstention."),
+            ("5. Blueprints & Gauges", "Floorplan room dimensions, doorway shortest-path hops & analog dial needles."),
         ],
         font_pt=10,
     )
     _fit_picture(s4, ASSETS_DIR / "families_showcase.png", 4.45, 1.18, 5.2, 4.0)
 
-    # Slide 5 — Process Flow & Failure Breakdown
+    # Slide 5 — Process Flow & Empirical Failure Insights
     s5 = prs.slides.add_slide(blank)
     _add_bg(s5, content_bg, w, h)
     _add_title(s5, "Process Flow & Empirical Model Failure Insights")
     _add_bullets(
-        s5, 0.45, 1.22, 3.8, 3.9,
+        s5, 0.45, 1.15, 9.1, 1.45,
         [
-            ("Pipeline Steps", "Seeded Spec -> Render + Manifest -> Symbolic Solver -> 5-Gate Validator -> Counterfactual Pair -> VLM Benchmark."),
-            ("Blind Baseline", "8.3% overall (0.0% CF consistency) confirms zero language-prior shortcuts."),
-            ("Gemini 3.5 Flash-Lite", "83.3% overall: 100% on Charts, Spatial & Invoices, but drops to 33.3% on Logic Circuits & Flow DAGs."),
-            ("Gemini 3 Flash Preview", "91.7% overall (100% on 22/22 answered calls; final 2 hit free-tier 429 quota)."),
+            ("End-to-End Flow", "Seeded Spec -> Render + Pixel Manifest -> Symbolic Solver -> 5-Gate Validator -> Counterfactual Pair (*_cf) -> Resumable VLM Benchmark -> MD/JSON/HTML."),
+            ("Blind Audits Pass Gate 5", "Blind regex (10.0%) and image-less Ollama Mistral-7B (0.0%, 0/30) fail completely, proving zero text-only cheating."),
+            ("Gemini 3.5 Flash-Lite (30/30, 0 Errors)", "83.3% overall (73.3% CF, 0% hallucination): 100% on Charts, Spatial & Redacted Docs, dropping to 66.7% Blueprints (door hops) & 50.0% Circuits."),
+            ("Gemini 3.5 Flash (21/22 Valid = 95.5%)", "70.0% overall (8 tasks hit free-tier 429 quota): solved Flash-Lite's medium DAG/circuits, yet STILL failed 5-pin crossing schematic s294_cf ('B' vs 'E')."),
         ],
-        font_pt=10,
+        font_pt=9.6,
     )
-    _fit_picture(s5, ASSETS_DIR / "model_failure_breakdown.png", 4.35, 1.2, 5.3, 3.95)
+    _fit_picture(s5, ASSETS_DIR / "model_failure_breakdown.png", 0.40, 2.66, 4.55, 2.52)
+    _fit_picture(s5, ASSETS_DIR / "failure_spotlight.png", 5.05, 2.66, 4.55, 2.52)
 
     # Slide 6 — Studio UI Screenshot
     s6 = prs.slides.add_slide(blank)
     _add_bg(s6, content_bg, w, h)
-    _add_title(s6, "Interactive Studio UI & Pixel Grounding Overlay (`vtf serve`)")
+    _add_title(s6, "Interactive Studio UI 2.0: Grounding Overlay, Twin Diff & Failure Filter")
     _fit_picture(s6, ASSETS_DIR / "studio_ui_screenshot.png", 0.45, 1.15, 9.1, 4.08)
 
     # Slide 7 — Architecture Diagram
@@ -265,23 +266,23 @@ def build_submission_deck(out_path: Path = OUT_PPTX) -> Path:
     s8 = prs.slides.add_slide(blank)
     _add_bg(s8, content_bg, w, h)
     _add_title(s8, "Technologies Used in the Solution")
-    _add_card(s8, 0.45, 1.28, 4.4, 1.8, "Synthesis & Exact Rendering", "Python 3.12, Pydantic v2, Matplotlib (Agg renderer window extents for bbox extraction), Pillow (anti-aliased schematics, racks, invoices, DejaVuSans typography), NumPy.", CARD_BLUE, BLUE)
-    _add_card(s8, 5.15, 1.28, 4.4, 1.8, "Validation & Mutation Testing", "5-Gate Validator (bounds, overlap, grounding, independent solver, leakage), pytest (19 tests), and 9-Mutant Fault Injection Suite (`vtf mutate`, 100% kill rate).", CARD_GREEN, TEAL)
-    _add_card(s8, 0.45, 3.28, 4.4, 1.8, "Multimodal Evaluation Harness", "Pluggable adapters for Google Gemini REST/SDK, OpenAI/OpenRouter/Groq, Local Ollama Vision (`qwen2.5vl:3b` / `moondream`), plus offline diagnostic baselines.", CARD_GREEN, TEAL)
-    _add_card(s8, 5.15, 3.28, 4.4, 1.8, "Studio UI, CLI & Packaging", "FastAPI, Uvicorn, HTTPX, interactive HTML5/SVG grounding overlay, unified `vtf` CLI, and standardized Docker container (`Dockerfile`).", CARD_BLUE, BLUE)
+    _add_card(s8, 0.45, 1.28, 4.4, 1.8, "Synthesis & Exact Rendering", "Python 3.12, Pydantic v2, Matplotlib (Agg renderer window extents for bbox extraction), Pillow (5-pin bridge schematics, floorplans, dial gauges, invoices), NumPy.", CARD_BLUE, BLUE)
+    _add_card(s8, 5.15, 1.28, 4.4, 1.8, "Validation, Blind LLM & Mutations", "5-Gate Validator (bounds, overlap, grounding, independent solver, leakage), local Ollama `mistral:latest` blind audit, 22 pytest tests & 9/9 fault-injection mutants.", CARD_GREEN, TEAL)
+    _add_card(s8, 0.45, 3.28, 4.4, 1.8, "Resumable VLM Eval Harness", "JSONL prediction cache (`predictions_cache.jsonl` auto-retrying API errors), Gemini REST adapters, OpenAI/OpenRouter/Groq, Ollama Vision & standalone HTML reports.", CARD_GREEN, TEAL)
+    _add_card(s8, 5.15, 3.28, 4.4, 1.8, "Studio UI 2.0, CLI & CI", "FastAPI Studio (`VLM Failures Only` filter, side-by-side twins, SVG grounding, per-model table), `vtf` CLI, Dockerfile & GitHub Actions CI.", CARD_BLUE, BLUE)
 
     # Slide 9 — Implementation Cost & Baseline Chart
     s9 = prs.slides.add_slide(blank)
     _add_bg(s9, content_bg, w, h)
-    _add_title(s9, "Estimated Implementation Cost & Solvability Verification")
+    _add_title(s9, "Estimated Implementation Cost & Blind-vs-VLM Verification")
     _add_bullets(
         s9, 0.45, 1.25, 3.8, 3.85,
         [
-            ("Generation & Validation ($0)", "100% deterministic CPU execution; zero paid image-generation APIs required."),
-            ("Prototyping Cost ($0)", "Evaluated via free Google AI Studio tier (Gemini 3.5 Flash-Lite & Gemini 3 Flash Preview) and optional local Ollama vision."),
-            ("Scalable Evaluation", "Ready to benchmark frontier models at larger scale using finalist credits."),
+            ("Generation & Validation ($0)", "100% deterministic CPU synthesis + Ollama `mistral:latest` local blind auditing ($0 API cost)."),
+            ("Prototyping Cost ($0)", "Evaluated via free Google AI Studio tier (Gemini 3.5 Flash-Lite 30/30 complete + Gemini 3.5 Flash) and offline baselines."),
+            ("Scalable Evaluation", "Resumable cache lets teams scale seamlessly to larger suites using finalist credits without re-paying completed calls."),
         ],
-        font_pt=10.5,
+        font_pt=10.3,
     )
     _fit_picture(s9, ASSETS_DIR / "validation_and_baselines.png", 4.35, 1.22, 5.3, 3.9)
 
@@ -292,13 +293,13 @@ def build_submission_deck(out_path: Path = OUT_PPTX) -> Path:
     _add_bullets(
         s10, 0.45, 1.25, 9.1, 3.9,
         [
-            ("Runnable Source Code + Docker", "Public GitHub repo (`github.com/anishkarak4-ux/NitroKnight`) with `pyproject.toml`, `Dockerfile`, CLI (`vtf`), and FastAPI Studio (`vtf serve`)."),
-            ("Sample Outputs (`samples/demo_suite`)", "24 validated tasks (12 base + 12 counterfactual twins) across 4 families × 3 difficulties with pixel manifests and solver traces."),
-            ("Validation & Mutation Evidence", "19/19 pytest tests pass; 24/24 tasks pass 5-gate validation; 9/9 fault-injection mutants killed (`mutation_report.json`)."),
-            ("Live Model Evaluation Findings", "Full benchmark table & failure taxonomy (`benchmark_report.md`) contrasting blind priors (8.3%) vs Gemini VLMs (83.3%–91.7%) vs Oracle (100%)."),
-            ("Technical Explanation & Demo", "Architecture spec (`docs/ARCHITECTURE.md`), validation summary (`docs/VALIDATION_EVIDENCE.md`), and live walkthrough (`docs/DEMO_SCRIPT.md`)."),
+            ("Runnable Source Code, Docker & CI", "Public GitHub repo (`github.com/anishkarak4-ux/NitroKnight`) with `pyproject.toml`, `Dockerfile`, `.github/workflows/ci.yml`, `vtf` CLI & Studio UI 2.0."),
+            ("Sample Outputs (`samples/demo_suite`)", "30 validated tasks (15 unique reasoning types + 15 twins) across 5 families x 3 difficulties with manifests, solver traces & HTML report."),
+            ("Validation & Mutation Evidence", "22/22 pytest tests pass; 30/30 tasks pass 5-gate validation; 9/9 fault-injection mutants killed (`mutation_report.json`)."),
+            ("Live Model Evaluation Findings", "Standalone MD/JSON/HTML reports contrasting Ollama Mistral blind LLM (0.0%) & regex prior (10.0%) vs Gemini 3.5 Flash-Lite (83.3%) & Flash (21/22 valid) vs Oracle (100%)."),
+            ("Technical Explanation & Demo", "Architecture spec (`docs/ARCHITECTURE.md`), validation summary (`docs/VALIDATION_EVIDENCE.md`), and demo walkthrough (`docs/DEMO_SCRIPT.md`)."),
         ],
-        font_pt=11,
+        font_pt=10.5,
     )
 
     # Slide 11 — Thank You

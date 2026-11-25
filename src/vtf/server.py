@@ -1,4 +1,4 @@
-"""FastAPI backend + self-contained interactive Studio UI for Visual Task Factory."""
+"""FastAPI backend + interactive Studio UI 2.0 for Visual Task Factory."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def _dataset_dir() -> Path:
     return path
 
 
-app = FastAPI(title="Visual Task Factory Studio", version="0.1.0")
+app = FastAPI(title="Visual Task Factory Studio", version="0.2.0")
 
 
 class GenerateRequest(BaseModel):
@@ -134,36 +134,37 @@ STUDIO_HTML = """<!doctype html>
     }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
-    header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #0f162b; }
+    header { padding: 14px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #0f162b; }
     header h1 { margin: 0; font-size: 1.15rem; letter-spacing: 0.02em; }
-    .pill { background: #1e293b; border: 1px solid var(--border); padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; color: var(--muted); }
-    .container { display: grid; grid-template-columns: 330px 1fr; min-height: calc(100vh - 58px); }
-    aside { border-right: 1px solid var(--border); padding: 16px; overflow-y: auto; max-height: calc(100vh - 58px); }
-    main { padding: 20px; overflow-y: auto; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+    .pill { background: #1e293b; border: 1px solid var(--border); padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; color: var(--muted); }
+    .container { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 56px); }
+    aside { border-right: 1px solid var(--border); padding: 14px; overflow-y: auto; max-height: calc(100vh - 56px); }
+    main { padding: 18px; overflow-y: auto; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
     .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    label { font-size: 0.78rem; color: var(--muted); display: block; margin-bottom: 4px; }
-    select, input, button { background: #0f162b; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 0.85rem; }
+    label { font-size: 0.76rem; color: var(--muted); display: block; margin-bottom: 4px; }
+    select, input, button { background: #0f162b; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; font-size: 0.83rem; }
     button { background: var(--accent); border-color: var(--accent); cursor: pointer; font-weight: 600; }
     button.secondary { background: #1e293b; border-color: var(--border); }
     button:disabled { opacity: 0.5; cursor: wait; }
-    .task-item { padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: #0f162b; }
+    .task-item { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 7px; cursor: pointer; background: #0f162b; }
     .task-item.active { border-color: var(--accent); background: #172554; }
-    .task-item .meta { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
+    .task-item .meta { font-size: 0.73rem; color: var(--muted); margin-top: 3px; }
+    .viewer-grid { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
     .viewer { position: relative; display: inline-block; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; }
     .viewer img { display: block; max-width: 100%; height: auto; }
     .viewer svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-    .gate { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1e293b; font-size: 0.85rem; }
+    .gate { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1e293b; font-size: 0.83rem; }
     .badge-ok { color: var(--ok); font-weight: 700; }
     .badge-bad { color: var(--bad); font-weight: 700; }
-    pre { background: #0b1020; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.78rem; border: 1px solid var(--border); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    th, td { border-bottom: 1px solid var(--border); padding: 7px 8px; text-align: left; }
+    pre { background: #0b1020; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.77rem; border: 1px solid var(--border); white-space: pre-wrap; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th, td { border-bottom: 1px solid var(--border); padding: 6px 8px; text-align: left; }
   </style>
 </head>
 <body>
 <header>
-  <h1>Visual Task Factory — Verification & Benchmark Studio</h1>
+  <h1>Visual Task Factory — Verification &amp; Benchmark Studio</h1>
   <div class="row">
     <span class="pill" id="statsPill">Loading dataset...</span>
     <button class="secondary" onclick="runBaselineEval()">Run Offline Baselines</button>
@@ -176,10 +177,11 @@ STUDIO_HTML = """<!doctype html>
       <div style="margin-bottom:8px;">
         <label>Family</label>
         <select id="genFamily" style="width:100%;">
-          <option value="charts">charts (Financial / Ops)</option>
+          <option value="charts">charts (Financial / Unlabeled)</option>
           <option value="spatial_inventory">spatial_inventory (Warehouse / CLEVR)</option>
           <option value="logic_circuits">logic_circuits (Schematics / Flow)</option>
-          <option value="structured_docs">structured_docs (Invoices / QA)</option>
+          <option value="structured_docs">structured_docs (Invoices / Redacted)</option>
+          <option value="blueprints_gauges">blueprints_gauges (Floorplans / Gauges)</option>
         </select>
       </div>
       <div class="row" style="margin-bottom:10px;">
@@ -191,14 +193,38 @@ STUDIO_HTML = """<!doctype html>
             <option value="hard">hard</option>
           </select>
         </div>
-        <div style="width:90px;">
+        <div style="width:88px;">
           <label>Seed</label>
           <input id="genSeed" type="number" value="777" style="width:100%;" />
         </div>
       </div>
       <button id="genBtn" style="width:100%;" onclick="generateLive()">Generate + 5-Gate Validate</button>
     </div>
-    <div style="font-weight:700;margin-bottom:8px;">Generated Tasks</div>
+
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">Filter Tasks</div>
+      <div class="row" style="margin-bottom:8px;">
+        <select id="fltFam" style="flex:1;" onchange="renderTaskList()">
+          <option value="">All Families</option>
+          <option value="charts">charts</option>
+          <option value="spatial_inventory">spatial_inventory</option>
+          <option value="logic_circuits">logic_circuits</option>
+          <option value="structured_docs">structured_docs</option>
+          <option value="blueprints_gauges">blueprints_gauges</option>
+        </select>
+        <select id="fltDiff" style="width:95px;" onchange="renderTaskList()">
+          <option value="">All Diffs</option>
+          <option value="easy">easy</option>
+          <option value="medium">medium</option>
+          <option value="hard">hard</option>
+        </select>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;">
+        <input type="checkbox" id="fltFailOnly" onchange="renderTaskList()" /> VLM Failures Only
+      </label>
+    </div>
+
+    <div style="font-weight:700;margin-bottom:8px;">Tasks (<span id="shownCount">0</span>)</div>
     <div id="taskList"></div>
   </aside>
   <main>
@@ -210,25 +236,44 @@ STUDIO_HTML = """<!doctype html>
       <div class="row" style="justify-content:space-between;margin-bottom:10px;">
         <div>
           <strong id="tTitle">Select a task</strong>
-          <div class="meta" id="tMeta" style="color:var(--muted);font-size:0.82rem;"></div>
+          <div class="meta" id="tMeta" style="color:var(--muted);font-size:0.8rem;"></div>
         </div>
         <div class="row">
+          <label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;">
+            <input type="checkbox" id="toggleTwin" onchange="selectTask(STATE.selected)" /> Side-by-Side Twin
+          </label>
           <label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;">
             <input type="checkbox" id="toggleBoxes" checked onchange="renderOverlay()" /> Show Grounding Boxes
           </label>
         </div>
       </div>
-      <p id="tQuestion" style="font-size:1rem;background:#0f162b;padding:10px;border-radius:6px;border:1px solid var(--border);"></p>
+      <p id="tQuestion" style="font-size:0.98rem;background:#0f162b;padding:10px;border-radius:6px;border:1px solid var(--border);"></p>
       <div class="row" style="margin-bottom:12px;">
         <span class="pill" id="tAnswer">Answer: -</span>
         <span class="pill" id="tReason">Reasoning: -</span>
         <span class="pill" id="tCf" style="display:none;"></span>
       </div>
-      <div class="viewer" id="viewerWrap">
-        <img id="tImg" src="" alt="Task image" onload="renderOverlay()" />
-        <svg id="tOverlay"></svg>
+      <div class="viewer-grid">
+        <div style="flex:1;min-width:340px;">
+          <div class="viewer" id="viewerWrap">
+            <img id="tImg" src="" alt="Task image" onload="renderOverlay()" />
+            <svg id="tOverlay"></svg>
+          </div>
+        </div>
+        <div id="twinWrap" style="flex:1;min-width:340px;display:none;">
+          <div class="pill" id="twinLabel" style="margin-bottom:6px;display:inline-block;"></div>
+          <div class="viewer">
+            <img id="twinImg" src="" alt="Counterfactual twin" />
+          </div>
+        </div>
       </div>
     </div>
+
+    <div class="card" id="taskPredsCard" style="display:none;">
+      <div style="font-weight:700;margin-bottom:8px;">Per-Model Evaluation Responses on Selected Task</div>
+      <div id="taskPreds"></div>
+    </div>
+
     <div class="row" style="align-items:stretch;">
       <div class="card" style="flex:1;min-width:300px;">
         <div style="font-weight:700;margin-bottom:8px;">5-Gate Automated Validation</div>
@@ -243,6 +288,19 @@ STUDIO_HTML = """<!doctype html>
 </div>
 <script>
 let STATE = { tasks: [], selected: null, report: null };
+
+function vlmFailedTask(tid) {
+  if (!STATE.report || !STATE.report.predictions) return false;
+  return STATE.report.predictions.some(
+    p => p.task_id === tid && !p.correct && !['diagnostic_baseline','diagnostic_oracle','blind_llm_audit'].includes(p.provider)
+  );
+}
+
+function findCounterfactualPartner(t) {
+  if (!t) return null;
+  if (t.counterfactual_of) return STATE.tasks.find(x => x.task_id === t.counterfactual_of) || null;
+  return STATE.tasks.find(x => x.counterfactual_of === t.task_id) || null;
+}
 
 async function loadTasks(selectId = null) {
   const res = await fetch('/api/tasks');
@@ -260,19 +318,31 @@ async function loadTasks(selectId = null) {
 }
 
 function renderTaskList() {
+  const fam = document.getElementById('fltFam').value;
+  const diff = document.getElementById('fltDiff').value;
+  const failOnly = document.getElementById('fltFailOnly').checked;
+  const filtered = STATE.tasks.filter(t => {
+    if (fam && t.family !== fam) return false;
+    if (diff && t.difficulty !== diff) return false;
+    if (failOnly && !vlmFailedTask(t.task_id)) return false;
+    return true;
+  });
+  document.getElementById('shownCount').textContent = filtered.length;
   const el = document.getElementById('taskList');
   el.innerHTML = '';
-  STATE.tasks.forEach(t => {
+  filtered.forEach(t => {
     const d = document.createElement('div');
+    const failed = vlmFailedTask(t.task_id);
     d.className = 'task-item' + (STATE.selected && STATE.selected.task_id === t.task_id ? ' active' : '');
     d.onclick = () => selectTask(t);
-    d.innerHTML = `<div style="font-weight:600;font-size:0.84rem;">${t.task_id}</div>
+    d.innerHTML = `<div style="font-weight:600;font-size:0.83rem;">${t.task_id}${failed ? ' <span style="color:#ef4444;">[VLM Fail]</span>' : ''}</div>
       <div class="meta">${t.family} · ${t.difficulty} · ${t.subtype}${t.counterfactual_of ? ' · CF-Twin' : ''}</div>`;
     el.appendChild(d);
   });
 }
 
 function selectTask(t) {
+  if (!t) return;
   STATE.selected = t;
   renderTaskList();
   document.getElementById('tTitle').textContent = `${t.task_id} (${t.family} / ${t.subtype})`;
@@ -289,6 +359,34 @@ function selectTask(t) {
   }
   const fname = t.image_path.split('/').pop();
   document.getElementById('tImg').src = `/api/images/${fname}?v=${t.image_sha256.slice(0,8)}`;
+
+  const twinWrap = document.getElementById('twinWrap');
+  const partner = document.getElementById('toggleTwin').checked ? findCounterfactualPartner(t) : null;
+  if (partner) {
+    twinWrap.style.display = 'block';
+    document.getElementById('twinLabel').textContent = `Partner: ${partner.task_id} | Answer: ${partner.answer}`;
+    document.getElementById('twinImg').src = `/api/images/${partner.image_path.split('/').pop()}?v=${partner.image_sha256.slice(0,8)}`;
+  } else {
+    twinWrap.style.display = 'none';
+  }
+
+  const predCard = document.getElementById('taskPredsCard');
+  const preds = (STATE.report?.predictions || []).filter(p => p.task_id === t.task_id);
+  if (preds.length) {
+    predCard.style.display = 'block';
+    document.getElementById('taskPreds').innerHTML = `<table>
+      <thead><tr><th>Model</th><th>Status</th><th>Predicted</th><th>Expected</th><th>Latency</th><th>Response Excerpt</th></tr></thead>
+      <tbody>${preds.map(p => `<tr>
+        <td><code>${p.model_name}</code></td>
+        <td><span class="${p.correct ? 'badge-ok' : 'badge-bad'}">${p.correct ? 'PASS' : (p.error_category || 'FAIL')}</span></td>
+        <td><code>${p.extracted_answer || '-'}</code></td>
+        <td><code>${p.expected_answer}</code></td>
+        <td>${p.latency_ms}ms</td>
+        <td style="max-width:340px;overflow:hidden;text-overflow:ellipsis;">${(p.raw_response || p.notes || '').replace(/</g,'&lt;').slice(0,140)}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } else {
+    predCard.style.display = 'none';
+  }
 
   const gatesEl = document.getElementById('tGates');
   gatesEl.innerHTML = (t.validation?.gates || []).map(g =>
@@ -319,18 +417,19 @@ function renderReport() {
   const r = STATE.report;
   if (!r) { card.style.display = 'none'; return; }
   card.style.display = 'block';
+  const fams = ['charts','spatial_inventory','logic_circuits','structured_docs','blueprints_gauges'];
   const rows = (r.models_evaluated || []).map(m => {
     const fam = r.by_family[m] || {};
+    const hr = r.hallucination_rate?.[m];
+    const fCells = fams.map(f => `<td>${fam[f] !== undefined ? (fam[f]*100).toFixed(0)+'%' : '-'}</td>`).join('');
     return `<tr><td><code>${m}</code></td>
       <td>${((r.overall_accuracy[m]||0)*100).toFixed(1)}%</td>
       <td>${((r.counterfactual_consistency[m]||0)*100).toFixed(1)}%</td>
-      <td>${((fam.charts||0)*100).toFixed(0)}%</td>
-      <td>${((fam.spatial_inventory||0)*100).toFixed(0)}%</td>
-      <td>${((fam.logic_circuits||0)*100).toFixed(0)}%</td>
-      <td>${((fam.structured_docs||0)*100).toFixed(0)}%</td></tr>`;
+      <td>${hr !== undefined ? (hr*100).toFixed(0)+'%' : 'N/A'}</td>
+      ${fCells}</tr>`;
   }).join('');
   document.getElementById('evalSummary').innerHTML = `<table>
-    <thead><tr><th>Model</th><th>Overall</th><th>CF Consistency</th><th>Charts</th><th>Spatial</th><th>Circuits</th><th>Docs</th></tr></thead>
+    <thead><tr><th>Model</th><th>Overall</th><th>CF Consistency</th><th>Hallucination</th><th>Charts</th><th>Spatial</th><th>Circuits</th><th>Docs</th><th>Blueprints</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
 }
 

@@ -45,8 +45,9 @@ class StructuredDocsTaskFamily(VisualTaskFamily):
             if rng.choice([True, False]):
                 return self._gen_invoice_spec(rng, difficulty, mode="checkbox_filter_sum")
             return self._gen_checklist_spec(rng, difficulty)
-        # HARD: discrepancy audit on printed invoice totals
-        return self._gen_invoice_spec(rng, difficulty, mode="discrepancy_audit")
+        # HARD: discrepancy audit or redacted abstention hallucination check
+        mode = rng.choice(["discrepancy_audit", "redacted_audit"])
+        return self._gen_invoice_spec(rng, difficulty, mode=mode)
 
     def _gen_invoice_spec(
         self, rng: random.Random, difficulty: Difficulty, *, mode: str
@@ -104,6 +105,26 @@ class StructuredDocsTaskFamily(VisualTaskFamily):
                 "vendor": rng.choice(VENDORS),
                 "invoice_no": f"INV-{rng.randint(4010, 9980)}",
                 "rows": rows,
+                "question": question,
+            }
+
+        if mode == "redacted_audit":
+            target = rng.choice(rows)
+            question = (
+                f"Inspect this invoice ledger for item {target['sku']}: if its Unit Price ($) is visibly readable, "
+                "return the exact dollar integer; if the Unit Price cell is covered by a redaction bar, "
+                "reply strictly with (CANNOT_DETERMINE)."
+            )
+            return {
+                "subtype": "invoice_ledger",
+                "difficulty": difficulty.value,
+                "reasoning_type": "hallucination_abstention",
+                "theme_name": "clean_ledger",
+                "vendor": rng.choice(VENDORS),
+                "invoice_no": f"INV-{rng.randint(4010, 9980)}",
+                "rows": rows,
+                "target_sku": target["sku"],
+                "redacted": True,
                 "question": question,
             }
 
@@ -247,24 +268,45 @@ class StructuredDocsTaskFamily(VisualTaskFamily):
             draw.text((cx + cols[3][1] / 2, (ry0 + ry1) / 2), str(row["qty"]), fill="#0F172A", font=num_font, anchor="mm")
             cx += cols[3][1]
 
-            # Col 4: Unit Price
-            draw.text(
-                (cx + cols[4][1] / 2, (ry0 + ry1) / 2),
-                f"${row['unit_price']}",
-                fill="#0F172A",
-                font=num_font,
-                anchor="mm",
-            )
+            # Col 4: Unit Price (or security redaction bar for hallucination abstention)
+            is_redacted_row = bool(spec.get("redacted")) and row["sku"] == spec.get("target_sku")
+            if is_redacted_row:
+                rx0, ry_box0, rx1, ry_box1 = cx + 18, ry0 + 14, cx + cols[4][1] - 18, ry1 - 14
+                draw.rounded_rectangle([rx0, ry_box0, rx1, ry_box1], radius=4, fill="#0F172A")
+                draw.text(((rx0 + rx1) / 2, (ry_box0 + ry_box1) / 2), "REDACTED", fill="#F8FAFC", font=th_font, anchor="mm")
+                elements.append(
+                    SceneElement(
+                        id=f"redaction_{row['sku']}",
+                        kind="redaction_mask",
+                        label=f"REDACTED {row['sku']}",
+                        bbox=(float(rx0), float(ry_box0), float(rx1), float(ry_box1)),
+                        font_px=15.0,
+                        is_queried_text=True,
+                    )
+                )
+            else:
+                draw.text(
+                    (cx + cols[4][1] / 2, (ry0 + ry1) / 2),
+                    f"${row['unit_price']}",
+                    fill="#0F172A",
+                    font=num_font,
+                    anchor="mm",
+                )
             cx += cols[4][1]
 
             # Col 5: Printed Total
-            draw.text(
-                (cx + cols[5][1] / 2, (ry0 + ry1) / 2),
-                f"${row['printed_total']}",
-                fill="#0F172A",
-                font=num_font,
-                anchor="mm",
-            )
+            if is_redacted_row:
+                rx0, ry_box0, rx1, ry_box1 = cx + 18, ry0 + 14, cx + cols[5][1] - 18, ry1 - 14
+                draw.rounded_rectangle([rx0, ry_box0, rx1, ry_box1], radius=4, fill="#0F172A")
+                draw.text(((rx0 + rx1) / 2, (ry_box0 + ry_box1) / 2), "REDACTED", fill="#F8FAFC", font=th_font, anchor="mm")
+            else:
+                draw.text(
+                    (cx + cols[5][1] / 2, (ry0 + ry1) / 2),
+                    f"${row['printed_total']}",
+                    fill="#0F172A",
+                    font=num_font,
+                    anchor="mm",
+                )
 
             elements.append(
                 SceneElement(
@@ -385,6 +427,21 @@ class StructuredDocsTaskFamily(VisualTaskFamily):
                 ]
                 return total, AnswerType.INTEGER, 0.0, "$", ref_ids, ev_ids, trace
 
+            if rtype == "hallucination_abstention":
+                sku = spec["target_sku"]
+                row = next(r for r in rows if r["sku"] == sku)
+                if spec.get("redacted"):
+                    mask_id = f"redaction_{sku}"
+                    trace = [
+                        f"Located row {sku}; Unit Price & Printed Total are visibly obscured by a REDACTED bar.",
+                        "Correct hallucination-resistant response is CANNOT_DETERMINE.",
+                    ]
+                    return "CANNOT_DETERMINE", AnswerType.STRING, 0.0, "", ref_ids + [mask_id], [row["id"], mask_id], trace
+                trace = [
+                    f"Located unredacted row {sku}; Unit Price is visibly readable (${row['unit_price']})."
+                ]
+                return str(row["unit_price"]), AnswerType.STRING, 0.0, "$", ref_ids, [row["id"]], trace
+
             # arithmetic_discrepancy_audit
             bad = [r for r in rows if int(r["qty"]) * int(r["unit_price"]) != int(r["printed_total"])]
             assert len(bad) == 1, f"Expected single discrepant row, got {bad}"
@@ -425,6 +482,11 @@ class StructuredDocsTaskFamily(VisualTaskFamily):
                     return twin, f"Checked Approved box on {unapproved[0]['sku']} (+${unapproved[0]['printed_total']})."
                 rows[0]["approved"] = False
                 return twin, f"Unchecked Approved box on {rows[0]['sku']}."
+            if rtype == "hallucination_abstention":
+                twin["redacted"] = not bool(twin.get("redacted"))
+                sku = twin["target_sku"]
+                state = "Restored visibility" if not twin["redacted"] else "Applied redaction bar"
+                return twin, f"{state} on Unit Price for {sku}."
             # discrepancy_audit: fix old bad row and move discrepancy to another row
             old_bad = next(r for r in rows if r["sku"] == twin["bad_sku"])
             old_bad["printed_total"] = old_bad["qty"] * old_bad["unit_price"]

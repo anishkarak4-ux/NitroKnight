@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
     p_gen.add_argument("--seed", type=int, default=42, help="Base deterministic random seed")
     p_gen.add_argument(
         "--families",
-        default="charts,spatial_inventory,logic_circuits,structured_docs",
+        default="charts,spatial_inventory,logic_circuits,structured_docs,blueprints_gauges",
         help="Comma-separated families",
     )
     p_gen.add_argument("--no-counterfactuals", action="store_true", help="Disable twin pairs")
@@ -41,9 +41,16 @@ def main(argv: list[str] | None = None) -> int:
     p_eval.add_argument(
         "--models",
         default="blind_prior,pixel_heuristic,oracle",
-        help="Comma-separated evaluator specs (e.g. gemini:gemini-3.6-flash,ollama:qwen2.5vl:3b,blind_prior)",
+        help="Comma-separated evaluator specs (e.g. gemini:gemini-3.5-flash-lite,ollama_blind:mistral:latest)",
     )
     p_eval.add_argument("--limit", type=int, default=None, help="Optional max tasks to evaluate")
+    p_eval.add_argument("--no-cache", action="store_true", help="Ignore prediction cache")
+    p_eval.add_argument("--verbose", action="store_true", help="Print per-task progress")
+
+    p_blind = sub.add_parser("audit-blind", help="Run real text-only LLM anti-shortcut audit (no images)")
+    p_blind.add_argument("--dataset", default="outputs/demo_suite", help="Dataset directory")
+    p_blind.add_argument("--model", default="mistral:latest", help="Local Ollama model name")
+    p_blind.add_argument("--limit", type=int, default=None, help="Optional max tasks")
 
     p_srv = sub.add_parser("serve", help="Launch interactive Visual Task Factory Studio UI")
     p_srv.add_argument("--dataset", default="outputs/demo_suite", help="Default dataset directory")
@@ -93,18 +100,36 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "evaluate":
         specs = [m.strip() for m in args.models.split(",") if m.strip()]
-        summary = run_benchmark(args.dataset, specs, limit=args.limit)
+        summary = run_benchmark(
+            args.dataset,
+            specs,
+            limit=args.limit,
+            verbose=args.verbose,
+            use_cache=not args.no_cache,
+        )
         print(
             json.dumps(
                 {
                     "valid_tasks": summary.valid_tasks,
                     "overall_accuracy": summary.overall_accuracy,
                     "counterfactual_consistency": summary.counterfactual_consistency,
+                    "hallucination_rate": summary.hallucination_rate,
                     "report_markdown": str(Path(args.dataset) / "benchmark_report.md"),
+                    "report_html": str(Path(args.dataset) / "benchmark_report.html"),
                 },
                 indent=2,
             )
         )
+        return 0
+
+    if args.cmd == "audit-blind":
+        summary = run_benchmark(
+            args.dataset,
+            [f"ollama_blind:{args.model}"],
+            limit=args.limit,
+            verbose=True,
+        )
+        print(json.dumps({"blind_llm_accuracy": summary.overall_accuracy}, indent=2))
         return 0
 
     if args.cmd == "serve":

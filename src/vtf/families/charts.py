@@ -197,8 +197,47 @@ class ChartsTaskFamily(VisualTaskFamily):
                 "question": question,
             }
 
-        # HARD: stacked_bar or dual_metric_combo
-        subtype = rng.choice(["stacked_bar", "dual_metric_combo"])
+        # HARD: stacked_bar, dual_metric_combo, or OCR-proof unlabeled_visual_gap
+        subtype = rng.choice(["unlabeled_visual_gap", "stacked_bar", "dual_metric_combo"])
+        if subtype == "unlabeled_visual_gap":
+            n_cats = 4
+            cats = domain["categories"][:n_cats]
+            s_names = domain["series"][:2]
+            v1 = self._unique_values(rng, n_cats, low=25, high=92, min_gap=6)
+            v2 = self._unique_values(rng, n_cats, low=22, high=90, min_gap=6)
+            gaps = [abs(a - b) for a, b in zip(v1, v2)]
+            max_i = int(np.argmax(gaps))
+            # Enforce a strong >= 14 unit visual separation over runner-up gap (no OCR numbers!)
+            for i in range(n_cats):
+                if i != max_i and gaps[max_i] - gaps[i] < 14:
+                    if v1[max_i] >= v2[max_i]:
+                        v1[max_i] = min(98, v1[max_i] + 15)
+                        v2[max_i] = max(12, v2[max_i] - 10)
+                    else:
+                        v2[max_i] = min(98, v2[max_i] + 15)
+                        v1[max_i] = max(12, v1[max_i] - 10)
+                    gaps[max_i] = abs(v1[max_i] - v2[max_i])
+            question = (
+                f"In '{domain['title']}' (no numeric values are printed on the bars), "
+                f"which category shows the LARGEST visual height gap between {s_names[0]} and {s_names[1]}?"
+            )
+            return {
+                "subtype": "unlabeled_visual_gap",
+                "difficulty": difficulty.value,
+                "reasoning_type": "unlabeled_bar_gap_comparison",
+                "theme_name": theme["name"],
+                "theme": theme,
+                "title": domain["title"],
+                "ylabel": domain["ylabel"],
+                "unit": domain["unit"],
+                "categories": cats,
+                "series_names": s_names,
+                "values": {s_names[0]: v1, s_names[1]: v2},
+                "show_values": False,
+                "rotate_x": 0,
+                "question": question,
+            }
+
         if subtype == "stacked_bar":
             n_cats = 5
             cats = domain["categories"][:n_cats]
@@ -247,7 +286,7 @@ class ChartsTaskFamily(VisualTaskFamily):
         # dual_metric_combo: bars (volume) + line (defect/latency rate %)
         periods = domain["periods"]
         vols = self._unique_values(rng, len(periods), low=40, high=115, min_gap=5)
-        rates = self._unique_values(rng, len(periods), low=2, high=14, min_gap=2)
+        rates = self._unique_values(rng, len(periods), low=4, high=15, min_gap=2)
         vol_thresh = 75
         rate_thresh = 8
         # Ensure clean separation from thresholds
@@ -400,7 +439,7 @@ class ChartsTaskFamily(VisualTaskFamily):
                             (f"val_{cat}", "value_label", str(v), txt, {"category": cat})
                         )
 
-            elif subtype == "grouped_bar":
+            elif subtype in {"grouped_bar", "unlabeled_visual_gap"}:
                 x = np.arange(len(cats))
                 width = 0.36
                 all_v = [v for s in series_names for v in values[s]]
@@ -559,13 +598,14 @@ class ChartsTaskFamily(VisualTaskFamily):
                     tracked_artists.append((f"vol_{cat}", "bar", cat, bar, {"category": cat, "volume": v}))
                     txt = ax.text(
                         bar.get_x() + bar.get_width() / 2,
-                        v + max(vols) * 0.02,
+                        max(vols) * 0.045,
                         str(v),
                         ha="center",
                         va="bottom",
-                        fontsize=9,
+                        fontsize=9.5,
                         fontweight="bold",
-                        color=theme["palette"][0],
+                        color="#FFFFFF",
+                        zorder=4,
                     )
                     tracked_artists.append((f"vol_txt_{cat}", "value_label", str(v), txt, {}))
 
@@ -606,12 +646,12 @@ class ChartsTaskFamily(VisualTaskFamily):
 
             def _to_bbox(artist: Any) -> tuple[float, float, float, float]:
                 bb = artist.get_window_extent(renderer=renderer)
-                return (
-                    round(float(bb.x0), 1),
-                    round(float(height_px - bb.y1), 1),
-                    round(float(bb.x1), 1),
-                    round(float(height_px - bb.y0), 1),
-                )
+                x0, y0, x1, y1 = float(bb.x0), float(height_px - bb.y1), float(bb.x1), float(height_px - bb.y0)
+                if x1 <= x0:
+                    x0, x1 = x0 - 2.0, x0 + 2.0
+                if y1 <= y0:
+                    y0, y1 = y0 - 2.0, y0 + 2.0
+                return (round(x0, 1), round(y0, 1), round(x1, 1), round(y1, 1))
 
             elements.append(
                 SceneElement(
@@ -694,6 +734,17 @@ class ChartsTaskFamily(VisualTaskFamily):
                 f"Identified {'maximum' if ask_max else 'minimum'} value {vals[best_idx]} at '{ans}'.",
             ]
             return ans, AnswerType.STRING, 0.0, "", ref_ids, ev_ids, trace
+
+        if subtype == "unlabeled_visual_gap":
+            gaps = {c: abs(values[s_names[0]][i] - values[s_names[1]][i]) for i, c in enumerate(cats)}
+            winner = max(gaps, key=lambda k: gaps[k])
+            ref_ids = [f"bar_{s}_{c}" for s in s_names for c in cats] + [f"xtick_{c}" for c in cats]
+            ev_ids = [f"bar_{s_names[0]}_{winner}", f"bar_{s_names[1]}_{winner}"]
+            trace = [
+                f"Visual gaps (|{s_names[0]} - {s_names[1]}|): {gaps}.",
+                f"Largest unlabeled visual gap is '{winner}' ({gaps[winner]}).",
+            ]
+            return winner, AnswerType.STRING, 0.0, "", ref_ids, ev_ids, trace
 
         if subtype == "grouped_bar":
             rtype = spec["reasoning_type"]
@@ -784,6 +835,16 @@ class ChartsTaskFamily(VisualTaskFamily):
                     vals[best_i] = vals[runner_i] + 8
                 delta = f"Lowered '{cats[runner_i]}' below '{cats[best_i]}' to flip minimum."
             return twin, delta
+
+        if subtype == "unlabeled_visual_gap":
+            gaps = {i: abs(values[s_names[0]][i] - values[s_names[1]][i]) for i in range(len(cats))}
+            order = sorted(gaps, key=lambda idx: gaps[idx])
+            best_i, runner_i = order[-1], order[-2]
+            values[s_names[0]][best_i] = 50
+            values[s_names[1]][best_i] = 52
+            values[s_names[0]][runner_i] = 94
+            values[s_names[1]][runner_i] = 16
+            return twin, f"Swapped gap leader from '{cats[best_i]}' to '{cats[runner_i]}'."
 
         if subtype == "grouped_bar":
             if twin["reasoning_type"] == "series_difference":

@@ -28,3 +28,8 @@ def test_string_and_boolean_normalization() -> None:
 
     _, ok, _, _ = verify_prediction("Yes", True, AnswerType.BOOLEAN)
     assert ok
+
+    _, ok, _, _ = verify_prediction('{"answer": "CANNOT_DETERMINE"}', "CANNOT_DETERMINE", AnswerType.STRING)
+    assert ok
+    _, ok_hal, _, _ = verify_prediction('{"answer": "$48"}', "CANNOT_DETERMINE", AnswerType.STRING)
+    assert not ok_hal

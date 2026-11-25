@@ -56,9 +56,9 @@ class LogicCircuitsTaskFamily(VisualTaskFamily):
             if rng.choice([True, False]):
                 return self._gen_circuit_spec(rng, difficulty, n_inputs=4, sensitivity_mode=False)
             return self._gen_flow_spec(rng, difficulty)
-        # HARD: either sensitivity diagnosis on 4-input multi-stage circuit or complex flow network
+        # HARD: dense 5-input crossing circuit (tracing or fault sensitivity) or flow network
         if rng.choice([True, False]):
-            return self._gen_circuit_spec(rng, difficulty, n_inputs=4, sensitivity_mode=True)
+            return self._gen_circuit_spec(rng, difficulty, n_inputs=5, sensitivity_mode=rng.choice([True, False]))
         return self._gen_flow_spec(rng, difficulty)
 
     def _gen_circuit_spec(
@@ -69,8 +69,8 @@ class LogicCircuitsTaskFamily(VisualTaskFamily):
         n_inputs: int,
         sensitivity_mode: bool,
     ) -> dict[str, Any]:
-        pin_names = ["A", "B", "C", "D"][:n_inputs]
-        for _attempt in range(100):
+        pin_names = ["A", "B", "C", "D", "E"][:n_inputs]
+        for _attempt in range(120):
             inputs = {p: rng.randint(0, 1) for p in pin_names}
             if n_inputs == 3:
                 gates = [
@@ -78,12 +78,21 @@ class LogicCircuitsTaskFamily(VisualTaskFamily):
                     {"id": "G2", "op": "NOT", "in1": "C", "in2": None, "out": "N2", "col": 1, "row": 1},
                     {"id": "G3", "op": rng.choice(GATES), "in1": "N1", "in2": "N2", "out": "Q", "col": 2, "row": 0},
                 ]
-            else:
+            elif n_inputs == 4:
                 gates = [
                     {"id": "G1", "op": rng.choice(GATES), "in1": "A", "in2": "B", "out": "N1", "col": 1, "row": 0},
                     {"id": "G2", "op": rng.choice(GATES), "in1": "C", "in2": "D", "out": "N2", "col": 1, "row": 1},
                     {"id": "G3", "op": "NOT", "in1": "N1", "in2": None, "out": "N3", "col": 2, "row": 0},
                     {"id": "G4", "op": rng.choice(GATES), "in1": "N3", "in2": "N2", "out": "Q", "col": 3, "row": 0},
+                ]
+            else:
+                # 5-input crossing layout: A+C cross B, B+D cross C, E feeds stage 2!
+                gates = [
+                    {"id": "G1", "op": rng.choice(GATES), "in1": "A", "in2": "C", "out": "N1", "col": 1, "row": 0},
+                    {"id": "G2", "op": rng.choice(GATES), "in1": "B", "in2": "D", "out": "N2", "col": 1, "row": 1},
+                    {"id": "G3", "op": "NOT", "in1": "N1", "in2": None, "out": "N3", "col": 2, "row": 0},
+                    {"id": "G4", "op": rng.choice(GATES), "in1": "N2", "in2": "E", "out": "N4", "col": 2, "row": 1},
+                    {"id": "G5", "op": rng.choice(GATES), "in1": "N3", "in2": "N4", "out": "Q", "col": 3, "row": 0},
                 ]
 
             base_q = _eval_circuit(inputs, gates)["Q"]
@@ -111,9 +120,10 @@ class LogicCircuitsTaskFamily(VisualTaskFamily):
                 if _eval_circuit(alt, gates)["Q"] != base_q:
                     sensitive.append(p)
             if len(sensitive) == 1:
+                opts = ", ".join(pin_names[:-1]) + f", or {pin_names[-1]}"
                 question = (
-                    "In this logic schematic, which SINGLE input pin (A, B, C, or D), if flipped alone "
-                    "(0->1 or 1->0) while all other inputs remain unchanged, changes the final output Q?"
+                    f"In this logic schematic (curved bridge arcs show non-connecting wire crossings), which SINGLE input pin ({opts}), "
+                    "if flipped alone (0->1 or 1->0) while all other inputs remain unchanged, changes the final output Q?"
                 )
                 return {
                     "subtype": "boolean_logic_circuit",
@@ -126,6 +136,36 @@ class LogicCircuitsTaskFamily(VisualTaskFamily):
                     "sensitive_pin": sensitive[0],
                     "question": question,
                 }
+
+        # Fallback guaranteed unique sensitivity configuration (works for 4 or 5 pins)
+        if n_inputs == 5:
+            inputs = {"A": 1, "B": 1, "C": 0, "D": 1, "E": 0}
+            # G1=OR(A,C)=1 -> N3=0; G2=OR(B,D)=1 -> N2=1; G4=AND(N2,E)=0 -> Q=OR(N3,N4)=0.
+            # Flip A->0: OR(0,0)=0 -> N3=1 -> Q=1! Wait: what about C->1? OR(1,1)=1 -> Q=0. What about E->1? AND(1,1)=1 -> Q=1! (2 pins A & E).
+            # Make G4=AND(N2, E) where B=1, D=1 (OR=1), A=1, C=1 (OR=1), E=0 -> G1=1 (N3=0), G2=1, G4=0, G5=OR(0,0)=0.
+            # Flip A->0: OR(0,1)=1 -> N3=0 -> Q=0! Flip C->0: OR(1,0)=1 -> Q=0! Flip B->0: OR(0,1)=1 -> Q=0! Flip D->0: Q=0! Flip E->1: N4=1 -> Q=1! UNIQUE=E!
+            gates = [
+                {"id": "G1", "op": "OR", "in1": "A", "in2": "C", "out": "N1", "col": 1, "row": 0},
+                {"id": "G2", "op": "OR", "in1": "B", "in2": "D", "out": "N2", "col": 1, "row": 1},
+                {"id": "G3", "op": "NOT", "in1": "N1", "in2": None, "out": "N3", "col": 2, "row": 0},
+                {"id": "G4", "op": "AND", "in1": "N2", "in2": "E", "out": "N4", "col": 2, "row": 1},
+                {"id": "G5", "op": "OR", "in1": "N3", "in2": "N4", "out": "Q", "col": 3, "row": 0},
+            ]
+            inputs = {"A": 1, "B": 1, "C": 1, "D": 1, "E": 0}
+            return {
+                "subtype": "boolean_logic_circuit",
+                "difficulty": difficulty.value,
+                "reasoning_type": "circuit_fault_sensitivity",
+                "theme_name": "schematic_clean",
+                "inputs": inputs,
+                "gates": gates,
+                "base_q": 0,
+                "sensitive_pin": "E",
+                "question": (
+                    "In this logic schematic (curved bridge arcs show non-connecting wire crossings), which SINGLE input pin (A, B, C, D, or E), "
+                    "if flipped alone (0->1 or 1->0) while all other inputs remain unchanged, changes the final output Q?"
+                ),
+            }
 
         # Fallback guaranteed unique sensitivity configuration
         inputs = {"A": 1, "B": 1, "C": 0, "D": 1}
@@ -288,12 +328,13 @@ class LogicCircuitsTaskFamily(VisualTaskFamily):
         gates: list[dict[str, Any]] = spec["gates"]
         pin_names = list(inputs.keys())
 
-        # Compute clean grid positions
-        pin_y_map = (
-            {pin_names[0]: 175, pin_names[1]: 315, pin_names[2]: 495}
-            if len(pin_names) == 3
-            else {"A": 150, "B": 265, "C": 435, "D": 550}
-        )
+        # Compute clean grid positions for 3, 4, or 5 inputs
+        if len(pin_names) == 3:
+            pin_y_map = {pin_names[0]: 175, pin_names[1]: 315, pin_names[2]: 495}
+        elif len(pin_names) == 4:
+            pin_y_map = {"A": 150, "B": 265, "C": 435, "D": 550}
+        else:
+            pin_y_map = {"A": 130, "B": 235, "C": 340, "D": 445, "E": 565}
         pin_out_xy: dict[str, tuple[float, float]] = {}
 
         for p, val in inputs.items():
@@ -318,15 +359,16 @@ class LogicCircuitsTaskFamily(VisualTaskFamily):
 
         max_col = max(g["col"] for g in gates)
         col_x = {1: 350, 2: 610, 3: 845}
-        row_y_2 = {0: 235, 1: 495}
+        row_y_2 = {0: 210, 1: 485}
         gate_w, gate_h = 128, 84
+        h_segments: list[tuple[float, float, float]] = []
 
         for g_idx, g in enumerate(gates):
             gx = col_x[g["col"]]
             if g["col"] == max_col:
                 gy = 350
             elif len([x for x in gates if x["col"] == g["col"]]) == 1:
-                gy = 235
+                gy = 210
             else:
                 gy = row_y_2[g["row"]]
 
@@ -335,14 +377,14 @@ class LogicCircuitsTaskFamily(VisualTaskFamily):
             in2_xy = (float(gx0), float(gy + 18)) if g.get("in2") else None
             out_xy = (float(gx1), float(gy))
 
-            # Draw wires from sources with staggered x_mid tracks so wires never overlap
+            # Draw wires from sources with staggered x_mid tracks & bridge arcs at crossings
             src1 = pin_out_xy[g["in1"]]
-            mid_x1 = src1[0] + (in1_xy[0] - src1[0]) * (0.42 + 0.1 * (g_idx % 3))
-            self._draw_orthogonal_wire(draw, src1, in1_xy, mid_x1, "#334155")
+            mid_x1 = src1[0] + (in1_xy[0] - src1[0]) * (0.36 + 0.11 * (g_idx % 3))
+            self._draw_orthogonal_wire(draw, src1, in1_xy, mid_x1, "#334155", h_segments)
             if in2_xy is not None and g.get("in2"):
                 src2 = pin_out_xy[g["in2"]]
-                mid_x2 = src2[0] + (in2_xy[0] - src2[0]) * (0.62 - 0.08 * (g_idx % 2))
-                self._draw_orthogonal_wire(draw, src2, in2_xy, mid_x2, "#334155")
+                mid_x2 = src2[0] + (in2_xy[0] - src2[0]) * (0.64 - 0.1 * (g_idx % 3))
+                self._draw_orthogonal_wire(draw, src2, in2_xy, mid_x2, "#334155", h_segments)
 
             # Draw gate box with unmistakable label
             gate_fill = "#FEF3C7" if g["op"] == "NOT" else "#ECFDF5"
@@ -395,8 +437,18 @@ class LogicCircuitsTaskFamily(VisualTaskFamily):
         p2: tuple[float, float],
         mid_x: float,
         color: str,
+        h_segments: list[tuple[float, float, float]] | None = None,
     ) -> None:
         draw.line([p1, (mid_x, p1[1]), (mid_x, p2[1]), p2], fill=color, width=3)
+        if h_segments is not None:
+            vy0, vy1 = min(p1[1], p2[1]), max(p1[1], p2[1])
+            for hy, hx0, hx1 in h_segments:
+                if hx0 + 8 < mid_x < hx1 - 8 and vy0 + 8 < hy < vy1 - 8:
+                    # Erase tiny gap and draw bridge arc over horizontal wire crossing
+                    draw.line([(mid_x, hy - 7), (mid_x, hy + 7)], fill="#F8FAFC", width=5)
+                    draw.arc([mid_x - 7, hy - 7, mid_x + 7, hy + 7], start=270, end=90, fill=color, width=3)
+            h_segments.append((p1[1], min(p1[0], mid_x), max(p1[0], mid_x)))
+            h_segments.append((p2[1], min(mid_x, p2[0]), max(mid_x, p2[0])))
         r = 4
         draw.ellipse((p1[0] - r, p1[1] - r, p1[0] + r, p1[1] + r), fill=color)
         draw.ellipse((p2[0] - r, p2[1] - r, p2[0] + r, p2[1] + r), fill=color)
@@ -575,6 +627,29 @@ class LogicCircuitsTaskFamily(VisualTaskFamily):
                 return None
 
             # sensitivity counterfactual: switch to a schematic where a different pin is uniquely sensitive
+            if len(spec["inputs"]) == 5:
+                if spec.get("sensitive_pin") != "E":
+                    twin["inputs"] = {"A": 1, "B": 1, "C": 1, "D": 1, "E": 0}
+                    twin["gates"] = [
+                        {"id": "G1", "op": "OR", "in1": "A", "in2": "C", "out": "N1", "col": 1, "row": 0},
+                        {"id": "G2", "op": "OR", "in1": "B", "in2": "D", "out": "N2", "col": 1, "row": 1},
+                        {"id": "G3", "op": "NOT", "in1": "N1", "in2": None, "out": "N3", "col": 2, "row": 0},
+                        {"id": "G4", "op": "AND", "in1": "N2", "in2": "E", "out": "N4", "col": 2, "row": 1},
+                        {"id": "G5", "op": "OR", "in1": "N3", "in2": "N4", "out": "Q", "col": 3, "row": 0},
+                    ]
+                    twin["sensitive_pin"] = "E"
+                    return twin, "Updated 5-pin schematic so pin E becomes the unique sensitive input."
+                twin["inputs"] = {"A": 0, "B": 1, "C": 1, "D": 1, "E": 1}
+                twin["gates"] = [
+                    {"id": "G1", "op": "AND", "in1": "A", "in2": "C", "out": "N1", "col": 1, "row": 0},
+                    {"id": "G2", "op": "OR", "in1": "B", "in2": "D", "out": "N2", "col": 1, "row": 1},
+                    {"id": "G3", "op": "NOT", "in1": "N1", "in2": None, "out": "N3", "col": 2, "row": 0},
+                    {"id": "G4", "op": "OR", "in1": "N2", "in2": "E", "out": "N4", "col": 2, "row": 1},
+                    {"id": "G5", "op": "AND", "in1": "N3", "in2": "N4", "out": "Q", "col": 3, "row": 0},
+                ]
+                twin["sensitive_pin"] = "A"
+                return twin, "Updated 5-pin schematic so pin A becomes the unique sensitive input."
+
             if spec.get("sensitive_pin") != "A":
                 twin["inputs"] = {"A": 0, "B": 1, "C": 1, "D": 1}
                 twin["gates"] = [
