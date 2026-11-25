@@ -1,6 +1,8 @@
 # Visual Task Factory (Innodata AI Hackathon — Challenge 02)
 
-A **reusable, Dockerized, deterministic visual evaluation factory** that synthetically generates diverse multimodal visual reasoning tasks, enforces a **5-gate automated validation pipeline** + **real blind-LLM audit** (verified via **9/9 mutation testing**), generates **counterfactual visual twin pairs** and **redacted abstention checks**, and benchmarks multimodal AI models across failure modes.
+[![Visual Task Factory CI](https://github.com/anishkarak4-ux/NitroKnight/actions/workflows/ci.yml/badge.svg)](https://github.com/anishkarak4-ux/NitroKnight/actions/workflows/ci.yml)
+
+A **reusable, Dockerized, deterministic visual evaluation factory** that synthetically generates diverse multimodal visual reasoning tasks, enforces a **5-gate automated validation pipeline** + **real blind-LLM audit** (verified via **9/9 mutation testing** and **150-task zero-collision scale stress tests**), generates **counterfactual visual twin pairs**, **redacted abstention checks**, and **scan/noise robustness perturbations**, and benchmarks multimodal AI models with **Attempted Accuracy, 95% Wilson CI, and Failure Taxonomy**.
 
 ---
 
@@ -8,9 +10,9 @@ A **reusable, Dockerized, deterministic visual evaluation factory** that synthet
 
 | Official Requirement | Included Location |
 |---|---|
-| **Runnable Source Code, Docker & CI** | [src/vtf/](src/vtf/), [Dockerfile](Dockerfile), [.github/workflows/ci.yml](.github/workflows/ci.yml), [pyproject.toml](pyproject.toml) |
-| **Sample Outputs & Findings** | [samples/demo_suite/](samples/demo_suite/) (30 tasks, PNGs, `benchmark_report.md`, `benchmark_report.html`, `predictions_cache.jsonl`) |
-| **Validation & Mutation Evidence** | [tests/](tests/), [docs/VALIDATION_EVIDENCE.md](docs/VALIDATION_EVIDENCE.md), [samples/demo_suite/mutation_report.json](samples/demo_suite/mutation_report.json), `vtf validate`, `vtf audit-blind`, `vtf mutate` |
+| **Runnable Source Code, Docker & CI** | [src/vtf/](src/vtf/), [Dockerfile](Dockerfile), [.github/workflows/ci.yml](.github/workflows/ci.yml) (`verify` + `docker` CI jobs), [pyproject.toml](pyproject.toml) |
+| **Sample Outputs & Findings** | [samples/demo_suite/](samples/demo_suite/) (30 tasks, PNGs, `benchmark_report.{md,json,html}`, `scale_report.json`, `robustness_report.json`, `predictions_cache.jsonl`) |
+| **Validation & Mutation Evidence** | [tests/](tests/), [docs/VALIDATION_EVIDENCE.md](docs/VALIDATION_EVIDENCE.md), [samples/demo_suite/mutation_report.json](samples/demo_suite/mutation_report.json), `vtf validate`, `vtf audit-blind`, `vtf mutate`, `vtf stress-test` |
 | **Technical Explanation & Deck** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PITCH_OUTLINE.md](docs/PITCH_OUTLINE.md), [docs/NitroKnight_Visual_Task_Factory_Submission.pptx](docs/NitroKnight_Visual_Task_Factory_Submission.pptx) |
 | **Demo Walkthrough Script** | [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) |
 
@@ -35,14 +37,15 @@ Every generated task passes five independent checks before entering the suite:
 4. **`independent_solver_verification`**: Re-computes the exact ground-truth answer independently from the canonical JSON spec and records a step-by-step `solver_trace`.
 5. **`anti_shortcut_leakage_audit`**: Rejects verbatim answer leakage, evaluates deterministic regex priors, and supports real image-less LLM auditing (`vtf audit-blind` via local Ollama `mistral:latest` -> `0.0%` accuracy).
 
-### 3. Mutation Testing (`vtf mutate`)
-Proves the validator and answer scorer catch deliberately injected faults with a **100% kill rate (9/9 mutants killed)**.
+### 3. Mutation Testing (`vtf mutate`) & 150-Task Scale Stress Test (`vtf stress-test`)
+Proves the validator and answer scorer catch deliberately injected faults with a **100% kill rate (9/9 mutants killed)**, and `vtf stress-test --per-cell 5` verifies **150 / 150 valid tasks (75 counterfactual pairs, 100% pass rate, 0 image hash collisions)** generated in **9.16s (`16.37 tasks/sec`)**.
 
-### 4. Counterfactual Twins (`*_cf`), Resumable Cache & Studio UI 2.0
+### 4. Counterfactual Twins, Scan Perturbations (`vtf perturb`) & Studio UI 2.0
 - Every base task generates a **minimal visual twin** that flips the verified answer (`samples/demo_suite` = 15 base + 15 twins across all 15 unique reasoning types).
-- **Resumable JSONL Cache & HTML Reporting:** `vtf evaluate` caches valid results in `predictions_cache.jsonl` (auto-retrying `api_error` calls) and outputs Markdown, JSON, and standalone `benchmark_report.html`.
-- **Pluggable Models:** **Google Gemini** (`gemini:gemini-3.5-flash-lite`, `gemini:gemini-3.5-flash`), **OpenAI / OpenRouter / Groq**, **Local Ollama Vision & Blind Audits** (`ollama:...`, `ollama_blind:mistral:latest`), plus `blind_prior`, `pixel_heuristic`, and `oracle`.
-- **Studio UI 2.0 (`vtf serve`):** Includes Family/Difficulty/**VLM Failures Only** filters, **Side-by-Side Counterfactual Twin** viewer, SVG bounding-box grounding overlay, Per-Model Evaluation Responses table, and Benchmark Summary table (`Hallucination` and `Blueprints` columns).
+- **Real-World Perturbation Robustness:** `vtf perturb --mode scan_tilt|low_contrast_jpeg` applies deterministic camera tilt (`±2°` + JPEG quantization) and low-contrast sensor noise while transforming `SceneManifest` bboxes.
+- **Resumable Cache, Statistical CI & HTML Reporting:** `vtf evaluate` caches valid results in `predictions_cache.jsonl`, separates **Strict vs. Attempted Accuracy** (excluding API errors), computes **95% Wilson CI**, classifies failures via **Error Taxonomy**, and writes MD/JSON/HTML reports.
+- **Pluggable Models:** **Google Gemini** (`gemini:gemini-3.5-flash-lite`, `gemini:gemini-3.5-flash`), **OpenAI / OpenRouter / Groq**, **Local Ollama Vision & Blind Audits** (`ollama:qwen2.5vl:3b`, `ollama_blind:mistral:latest`), plus `blind_prior`, `pixel_heuristic`, and `oracle`.
+- **Studio UI 2.0 (`vtf serve`):** Includes Family/Difficulty/**VLM Failures Only** filters, **Side-by-Side Counterfactual Twin** viewer, SVG grounding overlay, **Live Single-Task VLM Probe** (`/api/evaluate-one`), and one-click **`/report`** HTML viewer.
 
 ---
 
@@ -84,13 +87,17 @@ vtf validate --dataset outputs/demo_suite
 # 3. Prove tasks cannot be solved without images using a real local LLM (requires Ollama)
 vtf audit-blind --dataset outputs/demo_suite --model mistral:latest
 
-# 4. Run mutation testing to verify fault detection
+# 4. Run mutation testing + 150-task scale throughput stress test
 vtf mutate --out outputs/demo_suite/mutation_report.json
+vtf stress-test --per-cell 5 --seed 100 --out outputs/demo_suite/scale_report.json
 
-# 5. Benchmark offline baselines & real Gemini VLMs (resumable cache + HTML report)
-vtf evaluate --dataset outputs/demo_suite --models blind_prior,pixel_heuristic,gemini:gemini-3.5-flash-lite,oracle
+# 5. Generate scan/noise-perturbed robustness suite & benchmark
+vtf perturb --dataset samples/demo_suite --mode scan_tilt --out outputs/demo_scan_tilt
 
-# 6. Launch Interactive Studio UI 2.0 at http://127.0.0.1:8000
+# 6. Benchmark local Ollama Vision, offline baselines & Gemini VLMs (resumable cache + HTML report)
+vtf evaluate --dataset outputs/demo_suite --models blind_prior,pixel_heuristic,ollama:qwen2.5vl:3b,gemini:gemini-3.5-flash-lite,oracle
+
+# 7. Launch Interactive Studio UI 2.0 at http://127.0.0.1:8000 (HTML report at /report)
 vtf serve --dataset samples/demo_suite --port 8000
 ```
 

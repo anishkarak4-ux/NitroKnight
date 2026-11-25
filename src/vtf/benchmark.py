@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 from collections import defaultdict
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from vtf.factory import TaskFactory
 from vtf.schema import (
     BenchmarkSummary,
     CounterfactualPairMetrics,
+    FamilyName,
     ModelPrediction,
     TaskPackage,
 )
@@ -95,25 +97,69 @@ def run_benchmark(
     if use_cache and cache_map:
         _rewrite_cache(cache_path, cache_map)
 
+    return summarize_predictions(
+        ds_path,
+        tasks,
+        valid_tasks,
+        [ev.model_name for ev in eval_list],
+        preds_by_model_task,
+    )
+
+
+def summarize_predictions(
+    ds_path: Path,
+    tasks: list[TaskPackage],
+    valid_tasks: list[TaskPackage],
+    model_names: list[str],
+    preds_by_model_task: dict[str, dict[str, ModelPrediction]],
+) -> BenchmarkSummary:
+    """Compute aggregate accuracy, Wilson CI, taxonomy, and write MD/JSON/HTML reports."""
     overall: dict[str, float] = {}
+    attempted_accuracy: dict[str, float] = {}
+    attempted_counts: dict[str, str] = {}
+    wilson_ci_95: dict[str, tuple[float, float]] = {}
     by_family: dict[str, dict[str, float]] = {}
     by_diff: dict[str, dict[str, float]] = {}
     by_reason: dict[str, dict[str, float]] = {}
     cf_consistency: dict[str, float] = {}
     hallucination_rate: dict[str, float] = {}
+    error_taxonomy: dict[str, dict[str, int]] = {}
     cf_details: list[CounterfactualPairMetrics] = []
+    all_preds: list[ModelPrediction] = []
 
     task_map = {t.task_id: t for t in valid_tasks}
     cf_twins = [t for t in valid_tasks if t.counterfactual_of and t.counterfactual_of in task_map]
     abstention_tasks = [t for t in valid_tasks if str(t.answer) == "CANNOT_DETERMINE"]
 
-    for ev in eval_list:
-        mname = ev.model_name
+    for mname in model_names:
         mpreds = [preds_by_model_task[mname][t.task_id] for t in valid_tasks]
+        all_preds.extend(mpreds)
         overall[mname] = _acc(mpreds)
+        attempted = [p for p in mpreds if p.error_category != "api_error"]
+        attempted_hits = sum(1 for p in attempted if p.correct)
+        attempted_accuracy[mname] = _acc(attempted)
+        attempted_counts[mname] = f"{attempted_hits}/{len(attempted)}"
+        wilson_ci_95[mname] = _wilson_interval(attempted_hits, len(attempted))
         by_family[mname] = _group_acc(valid_tasks, preds_by_model_task[mname], lambda t: t.family.value)
         by_diff[mname] = _group_acc(valid_tasks, preds_by_model_task[mname], lambda t: t.difficulty.value)
         by_reason[mname] = _group_acc(valid_tasks, preds_by_model_task[mname], lambda t: t.reasoning_type)
+
+        tax: dict[str, int] = defaultdict(int)
+        for p in mpreds:
+            t_obj = task_map[p.task_id]
+            if p.correct:
+                tax["correct"] += 1
+            elif p.error_category == "api_error":
+                tax["api_quota_error"] += 1
+            elif str(t_obj.answer) == "CANNOT_DETERMINE":
+                tax["abstention_hallucination"] += 1
+            elif t_obj.family == FamilyName.LOGIC_CIRCUITS:
+                tax["circuit_dag_reasoning"] += 1
+            elif t_obj.family == FamilyName.BLUEPRINTS_GAUGES:
+                tax["blueprint_gauge_spatial"] += 1
+            else:
+                tax[p.error_category or "other_error"] += 1
+        error_taxonomy[mname] = dict(sorted(tax.items()))
 
         if abstention_tasks:
             hallucinated = sum(
@@ -158,13 +204,17 @@ def run_benchmark(
         total_tasks=len(tasks),
         valid_tasks=len(valid_tasks),
         rejected_candidates=rejected_count,
-        models_evaluated=[ev.model_name for ev in eval_list],
+        models_evaluated=model_names,
         overall_accuracy=overall,
+        attempted_accuracy=attempted_accuracy,
+        attempted_counts=attempted_counts,
+        wilson_ci_95=wilson_ci_95,
         by_family=by_family,
         by_difficulty=by_diff,
         by_reasoning=by_reason,
         counterfactual_consistency=cf_consistency,
         hallucination_rate=hallucination_rate,
+        error_taxonomy=error_taxonomy,
         predictions=all_preds,
         counterfactual_details=cf_details,
     )
@@ -173,6 +223,16 @@ def run_benchmark(
     (ds_path / "benchmark_report.md").write_text(format_markdown_report(summary, valid_tasks), encoding="utf-8")
     (ds_path / "benchmark_report.html").write_text(format_html_report(summary, valid_tasks), encoding="utf-8")
     return summary
+
+
+def _wilson_interval(hits: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    if n <= 0:
+        return (0.0, 0.0)
+    p = hits / n
+    denom = 1.0 + (z * z) / n
+    center = (p + (z * z) / (2.0 * n)) / denom
+    half = (z * math.sqrt((p * (1.0 - p) + (z * z) / (4.0 * n)) / n)) / denom
+    return (round(max(0.0, center - half), 4), round(min(1.0, center + half), 4))
 
 
 def _acc(preds: list[ModelPrediction]) -> float:
@@ -198,10 +258,10 @@ def format_markdown_report(summary: BenchmarkSummary, tasks: list[TaskPackage]) 
         f"- **Valid Tasks:** `{summary.valid_tasks}` (Rejected invalid candidates: `{summary.rejected_candidates}`)",
         f"- **Models Evaluated:** {', '.join(f'`{m}`' for m in summary.models_evaluated)}",
         "",
-        "## 1. Overall Accuracy, Counterfactual Consistency & Hallucination Rate",
+        "## 1. Overall & Attempted Accuracy (with 95% Wilson CI), Counterfactual Consistency & Hallucination",
         "",
-        "| Model | Overall Accuracy | Counterfactual Consistency | Hallucination Rate | API Errors |",
-        "|---|---:|---:|---:|---:|",
+        "| Model | Strict Accuracy | Attempted Accuracy | 95% Wilson CI | CF Consistency | Hallucination Rate | API Errors |",
+        "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for m in summary.models_evaluated:
         api_errs = sum(
@@ -209,8 +269,12 @@ def format_markdown_report(summary: BenchmarkSummary, tasks: list[TaskPackage]) 
         )
         h_rate = summary.hallucination_rate.get(m)
         h_str = f"{h_rate * 100:.1f}%" if h_rate is not None else "N/A"
+        att_acc = summary.attempted_accuracy.get(m, summary.overall_accuracy.get(m, 0.0))
+        att_cnt = summary.attempted_counts.get(m, "-")
+        lo, hi = summary.wilson_ci_95.get(m, (0.0, 0.0))
         lines.append(
             f"| `{m}` | {summary.overall_accuracy.get(m, 0.0)*100:.1f}% | "
+            f"{att_acc*100:.1f}% ({att_cnt}) | [{lo*100:.1f}%, {hi*100:.1f}%] | "
             f"{summary.counterfactual_consistency.get(m, 0.0)*100:.1f}% | {h_str} | {api_errs} |"
         )
 
@@ -230,6 +294,15 @@ def format_markdown_report(summary: BenchmarkSummary, tasks: list[TaskPackage]) 
         row = [f"{summary.by_difficulty.get(m, {}).get(d, 0.0)*100:.1f}%" for d in diffs]
         lines.append(f"| `{m}` | " + " | ".join(row) + " |")
 
+    lines.extend(["", "## 4. Failure Taxonomy Counts", ""])
+    all_cats = sorted({cat for m in summary.models_evaluated for cat in summary.error_taxonomy.get(m, {})})
+    if all_cats:
+        lines.append("| Model | " + " | ".join(all_cats) + " |")
+        lines.append("|---|" + "|".join("---:" for _ in all_cats) + "|")
+        for m in summary.models_evaluated:
+            row = [str(summary.error_taxonomy.get(m, {}).get(c, 0)) for c in all_cats]
+            lines.append(f"| `{m}` | " + " | ".join(row) + " |")
+
     return "\n".join(lines) + "\n"
 
 
@@ -242,22 +315,34 @@ def format_html_report(summary: BenchmarkSummary, tasks: list[TaskPackage]) -> s
         api_errs = sum(1 for p in summary.predictions if p.model_name == m and p.error_category == "api_error")
         h_rate = summary.hallucination_rate.get(m)
         h_str = f"{h_rate * 100:.1f}%" if h_rate is not None else "N/A"
+        att_acc = summary.attempted_accuracy.get(m, summary.overall_accuracy.get(m, 0.0))
+        att_cnt = summary.attempted_counts.get(m, "-")
+        lo, hi = summary.wilson_ci_95.get(m, (0.0, 0.0))
         fam_cells = "".join(
             f"<td>{summary.by_family.get(m, {}).get(f, 0.0)*100:.1f}%</td>" for f in fams
         )
         rows_overall.append(
             f"<tr><td><code>{html.escape(m)}</code></td>"
             f"<td><strong>{summary.overall_accuracy.get(m, 0.0)*100:.1f}%</strong></td>"
+            f"<td><strong>{att_acc*100:.1f}%</strong> ({html.escape(att_cnt)})</td>"
+            f"<td>[{lo*100:.1f}%, {hi*100:.1f}%]</td>"
             f"<td>{summary.counterfactual_consistency.get(m, 0.0)*100:.1f}%</td>"
             f"<td>{h_str}</td>{fam_cells}<td>{api_errs}</td></tr>"
         )
+
+    all_cats = sorted({cat for m in summary.models_evaluated for cat in summary.error_taxonomy.get(m, {})})
+    tax_headers = "".join(f"<th>{html.escape(c)}</th>" for c in all_cats)
+    tax_rows = []
+    for m in summary.models_evaluated:
+        cells = "".join(f"<td>{summary.error_taxonomy.get(m, {}).get(c, 0)}</td>" for c in all_cats)
+        tax_rows.append(f"<tr><td><code>{html.escape(m)}</code></td>{cells}</tr>")
 
     # Highlight up to 12 real VLM failures (non-baseline)
     fail_cards = []
     for p in summary.predictions:
         if p.provider in {"diagnostic_baseline", "diagnostic_oracle", "blind_llm_audit"}:
             continue
-        if p.correct:
+        if p.correct or p.error_category == "api_error":
             continue
         t = task_map.get(p.task_id)
         if not t:
@@ -280,17 +365,19 @@ def format_html_report(summary: BenchmarkSummary, tasks: list[TaskPackage]) -> s
 <style>
 body{{font-family:system-ui,sans-serif;margin:28px;background:#f8fafc;color:#0f172a}}
 table{{border-collapse:collapse;width:100%;background:#fff;margin-bottom:24px}}
-th,td{{border:1px solid #cbd5e1;padding:8px 10px;text-align:left;font-size:14px}}
+th,td{{border:1px solid #cbd5e1;padding:8px 10px;text-align:left;font-size:13.5px}}
 th{{background:#0f172a;color:#fff}}
 .card{{background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:16px;margin-bottom:18px}}
 .card img{{max-width:680px;display:block;border:1px solid #e2e8f0;margin:10px 0}}
 .bad{{color:#dc2626;font-weight:700}}
 pre{{background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;white-space:pre-wrap;font-size:12px}}
 </style></head><body>
-<h1>Visual Task Factory — Benchmark & Failure Report</h1>
+<h1>Visual Task Factory — Benchmark &amp; Failure Report</h1>
 <p>Valid Tasks: <strong>{summary.valid_tasks}</strong> | Rejected Candidates: <strong>{summary.rejected_candidates}</strong></p>
-<table><thead><tr><th>Model</th><th>Overall</th><th>CF Consistency</th><th>Hallucination</th>{fam_headers}<th>API Errors</th></tr></thead>
+<table><thead><tr><th>Model</th><th>Strict Acc</th><th>Attempted Acc</th><th>95% Wilson CI</th><th>CF Consistency</th><th>Hallucination</th>{fam_headers}<th>API Errors</th></tr></thead>
 <tbody>{''.join(rows_overall)}</tbody></table>
-<h2>Spotlight: Real VLM Failure Cases</h2>
-{''.join(fail_cards) if fail_cards else '<p>No VLM failures recorded in this run.</p>'}
+<h2>Failure Taxonomy</h2>
+<table><thead><tr><th>Model</th>{tax_headers}</tr></thead><tbody>{''.join(tax_rows)}</tbody></table>
+<h2>Spotlight: Real VLM Reasoning Failure Cases</h2>
+{''.join(fail_cards) if fail_cards else '<p>No VLM reasoning failures recorded in this run.</p>'}
 </body></html>"""

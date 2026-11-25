@@ -486,17 +486,28 @@ class BlueprintsGaugesTaskFamily(VisualTaskFamily):
                 rm["w_m"] += 2
                 return twin, f"Increased width of {t_name} by +2m."
 
-            # blueprint_door_hops: flip one doorway state while keeping start->end connected and changing hop count
+            # blueprint_door_hops: find minimal-Hamming doorway edit shifting shortest hops while staying connected
             r_start = next(r for r in twin["rooms"] if r["name"] == twin["start_room"])
             r_end = next(r for r in twin["rooms"] if r["name"] == twin["end_room"])
-            base_hops = self._bfs_hops(twin["doors"], (r_start["row"], r_start["col"]), (r_end["row"], r_end["col"]))
-            for d in twin["doors"]:
-                d["open"] = not d["open"]
-                new_hops = self._bfs_hops(twin["doors"], (r_start["row"], r_start["col"]), (r_end["row"], r_end["col"]))
+            s_rc, e_rc = (r_start["row"], r_start["col"]), (r_end["row"], r_end["col"])
+            doors_list = twin["doors"]
+            base_hops = self._bfs_hops(doors_list, s_rc, e_rc)
+            n_doors = len(doors_list)
+            orig_states = [bool(d["open"]) for d in doors_list]
+            # Sort all 2^7 masks by Hamming distance (1 flip, then 2 flips, etc.)
+            masks = sorted(range(1, 1 << n_doors), key=lambda m: m.bit_count())
+            for mask in masks:
+                for idx in range(n_doors):
+                    doors_list[idx]["open"] = (not orig_states[idx]) if (mask & (1 << idx)) else orig_states[idx]
+                new_hops = self._bfs_hops(doors_list, s_rc, e_rc)
                 if new_hops is not None and new_hops != base_hops:
-                    state = "opened" if d["open"] else "sealed"
-                    return twin, f"{state.capitalize()} doorway {d['id']}, shifting shortest hops from {base_hops} to {new_hops}."
-                d["open"] = not d["open"]
+                    changed_ids = [doors_list[i]["id"] for i in range(n_doors) if mask & (1 << i)]
+                    return twin, (
+                        f"Modified doorway(s) {', '.join(changed_ids)}, shifting shortest hops "
+                        f"from {base_hops} to {new_hops}."
+                    )
+            for idx in range(n_doors):
+                doors_list[idx]["open"] = orig_states[idx]
             return None
 
         gauges = twin["gauges"]

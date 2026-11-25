@@ -1,0 +1,24 @@
+{
+  "per_cell": 5,
+  "base_seed": 100,
+  "valid_tasks": 150,
+  "rejected_candidates": 0,
+  "validation_pass_rate": 1.0,
+  "unique_image_sha256": 150,
+  "zero_hash_collisions": true,
+  "counterfactual_pairs": 75,
+  "elapsed_sec": 9.161,
+  "throughput_tasks_per_sec": 16.37,
+  "by_family": {
+    "blueprints_gauges": 30,
+    "charts": 30,
+    "logic_circuits": 30,
+    "spatial_inventory": 30,
+    "structured_docs": 30
+  },
+  "by_difficulty": {
+    "easy": 50,
+    "hard": 50,
+    "medium": 50
+  }
+}

@@ -7,6 +7,7 @@
     "blind_text_prior",
     "pixel_cv_heuristic",
     "blind_llm_mistral_latest",
+    "qwen2.5vl:3b",
     "gemini-3.5-flash-lite",
     "gemini-3.5-flash",
     "oracle_spec_verifier"
@@ -15,9 +16,58 @@
     "blind_text_prior": 0.1,
     "pixel_cv_heuristic": 0.0667,
     "blind_llm_mistral_latest": 0.0,
+    "qwen2.5vl:3b": 0.5667,
     "gemini-3.5-flash-lite": 0.8333,
     "gemini-3.5-flash": 0.7,
     "oracle_spec_verifier": 1.0
+  },
+  "attempted_accuracy": {
+    "blind_text_prior": 0.1,
+    "pixel_cv_heuristic": 0.0667,
+    "blind_llm_mistral_latest": 0.0,
+    "qwen2.5vl:3b": 0.5667,
+    "gemini-3.5-flash-lite": 0.8333,
+    "gemini-3.5-flash": 0.9545,
+    "oracle_spec_verifier": 1.0
+  },
+  "attempted_counts": {
+    "blind_text_prior": "3/30",
+    "pixel_cv_heuristic": "2/30",
+    "blind_llm_mistral_latest": "0/30",
+    "qwen2.5vl:3b": "17/30",
+    "gemini-3.5-flash-lite": "25/30",
+    "gemini-3.5-flash": "21/22",
+    "oracle_spec_verifier": "30/30"
+  },
+  "wilson_ci_95": {
+    "blind_text_prior": [
+      0.0346,
+      0.2562
+    ],
+    "pixel_cv_heuristic": [
+      0.0185,
+      0.2132
+    ],
+    "blind_llm_mistral_latest": [
+      0.0,
+      0.1135
+    ],
+    "qwen2.5vl:3b": [
+      0.392,
+      0.7262
+    ],
+    "gemini-3.5-flash-lite": [
+      0.6644,
+      0.9266
+    ],
+    "gemini-3.5-flash": [
+      0.782,
+      0.9919
+    ],
+    "oracle_spec_verifier": [
+      0.8865,
+      1.0
+    ]
   },
   "by_family": {
     "blind_text_prior": {
@@ -40,6 +90,13 @@
       "logic_circuits": 0.0,
       "spatial_inventory": 0.0,
       "structured_docs": 0.0
+    },
+    "qwen2.5vl:3b": {
+      "blueprints_gauges": 0.3333,
+      "charts": 1.0,
+      "logic_circuits": 0.3333,
+      "spatial_inventory": 0.5,
+      "structured_docs": 0.6667
     },
     "gemini-3.5-flash-lite": {
       "blueprints_gauges": 0.6667,
@@ -78,6 +135,11 @@
       "easy": 0.0,
       "hard": 0.0,
       "medium": 0.0
+    },
+    "qwen2.5vl:3b": {
+      "easy": 0.9,
+      "hard": 0.6,
+      "medium": 0.2
     },
     "gemini-3.5-flash-lite": {
       "easy": 0.9,
@@ -147,6 +209,23 @@
       "table_cell_lookup": 0.0,
       "unlabeled_bar_gap_comparison": 0.0
     },
+    "qwen2.5vl:3b": {
+      "analog_needle_reading": 0.5,
+      "blueprint_area_sum": 0.5,
+      "blueprint_door_hops": 0.0,
+      "checkbox_filtered_sum": 0.0,
+      "circuit_fault_sensitivity": 0.0,
+      "circuit_signal_tracing": 1.0,
+      "compositional_spatial_relation": 0.5,
+      "constrained_shortest_path": 0.0,
+      "extrema_min": 1.0,
+      "filtered_count": 1.0,
+      "hallucination_abstention": 1.0,
+      "series_difference": 1.0,
+      "spatial_neighbor_lookup": 0.0,
+      "table_cell_lookup": 1.0,
+      "unlabeled_bar_gap_comparison": 1.0
+    },
     "gemini-3.5-flash-lite": {
       "analog_needle_reading": 1.0,
       "blueprint_area_sum": 1.0,
@@ -203,6 +282,7 @@
     "blind_text_prior": 0.0,
     "pixel_cv_heuristic": 0.0,
     "blind_llm_mistral_latest": 0.0,
+    "qwen2.5vl:3b": 0.4667,
     "gemini-3.5-flash-lite": 0.7333,
     "gemini-3.5-flash": 0.6667,
     "oracle_spec_verifier": 1.0
@@ -211,9 +291,55 @@
     "blind_text_prior": 1.0,
     "pixel_cv_heuristic": 1.0,
     "blind_llm_mistral_latest": 1.0,
+    "qwen2.5vl:3b": 0.0,
     "gemini-3.5-flash-lite": 0.0,
     "gemini-3.5-flash": 0.0,
     "oracle_spec_verifier": 0.0
+  },
+  "error_taxonomy": {
+    "blind_text_prior": {
+      "abstention_hallucination": 1,
+      "blueprint_gauge_spatial": 6,
+      "circuit_dag_reasoning": 4,
+      "correct": 3,
+      "numeric_mismatch": 7,
+      "wrong_entity": 9
+    },
+    "pixel_cv_heuristic": {
+      "abstention_hallucination": 1,
+      "blueprint_gauge_spatial": 6,
+      "circuit_dag_reasoning": 5,
+      "correct": 2,
+      "numeric_mismatch": 7,
+      "wrong_entity": 9
+    },
+    "blind_llm_mistral_latest": {
+      "abstention_hallucination": 1,
+      "blueprint_gauge_spatial": 6,
+      "circuit_dag_reasoning": 6,
+      "parse_failure": 8,
+      "wrong_entity": 9
+    },
+    "qwen2.5vl:3b": {
+      "blueprint_gauge_spatial": 4,
+      "circuit_dag_reasoning": 4,
+      "correct": 17,
+      "numeric_mismatch": 2,
+      "wrong_entity": 3
+    },
+    "gemini-3.5-flash-lite": {
+      "blueprint_gauge_spatial": 2,
+      "circuit_dag_reasoning": 3,
+      "correct": 25
+    },
+    "gemini-3.5-flash": {
+      "api_quota_error": 8,
+      "circuit_dag_reasoning": 1,
+      "correct": 21
+    },
+    "oracle_spec_verifier": {
+      "correct": 30
+    }
   },
   "predictions": [
     {
@@ -1474,6 +1600,426 @@
       "error_category": "parse_failure",
       "latency_ms": 4242.1,
       "used_image": false,
+      "notes": ""
+    },
+    {
+      "task_id": "charts_easy_s46",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n    \"answer\": \"East\",\n    \"reason\": \"The East category has the shortest bar, indicating the lowest number of orders.\"\n}\n```",
+      "extracted_answer": "East",
+      "expected_answer": "East",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 5793.6,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "charts_easy_s46_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"South\",\n  \"reason\": \"The South category has the shortest bar, indicating the lowest number of orders.\"\n}\n```",
+      "extracted_answer": "South",
+      "expected_answer": "South",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 24556.2,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "charts_medium_s77",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"3\",\n  \"reason\": \"The difference between the height of the 'Express' bar and the 'Standard' bar in the South section is 3 units.\"\n}\n```",
+      "extracted_answer": "3",
+      "expected_answer": "3",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 25541.5,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "charts_medium_s77_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "{\"answer\": 14, \"reason\": \"The difference between the heights of the two bars in the South section is 14 thousand.\"}",
+      "extracted_answer": "14",
+      "expected_answer": "14",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 23688.3,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "charts_hard_s108",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"Gateways\",\n  \"reason\": \"The height difference between the Enterprise and SMB bars for the Gateways category is the largest.\"\n}\n```",
+      "extracted_answer": "Gateways",
+      "expected_answer": "Gateways",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 24952.0,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "charts_hard_s108_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"Routers\",\n  \"reason\": \"The height difference between the Enterprise and SMB bars for the Routers category is the largest.\"\n}\n```",
+      "extracted_answer": "Routers",
+      "expected_answer": "Routers",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 25157.7,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "spatial_inventory_easy_s139",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"1\",\n  \"reason\": \"There is one blue crate on the Middle shelf with the 'RUSH' tag.\"\n}\n```",
+      "extracted_answer": "1",
+      "expected_answer": "1",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 24353.8,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "spatial_inventory_easy_s139_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "{\"answer\": \"2\", \"reason\": \"There are two crates on the Middle shelf with the 'RUSH' tag.\"}",
+      "extracted_answer": "2",
+      "expected_answer": "2",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 23466.8,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "spatial_inventory_medium_s170",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "{\"answer\": \"BATTERY\", \"reason\": \"The crate immediately to the right of the Blue HOLD crate is labeled 'BATTERY'.\"}",
+      "extracted_answer": "BATTERY",
+      "expected_answer": "SENSOR",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "wrong_entity",
+      "latency_ms": 23300.0,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "spatial_inventory_medium_s170_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "{\"answer\": \"BATTERY\", \"reason\": \"The crate immediately to the right of the Blue HOLD crate is purple and labeled 'BATTERY'.\"}",
+      "extracted_answer": "BATTERY",
+      "expected_answer": "CPU",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "wrong_entity",
+      "latency_ms": 23559.9,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "spatial_inventory_hard_s201",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"blue\",\n  \"reason\": \"The object immediately to the right of the striped purple hexagon is a blue square.\"\n}\n```",
+      "extracted_answer": "blue",
+      "expected_answer": "Red",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "wrong_entity",
+      "latency_ms": 24829.6,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "spatial_inventory_hard_s201_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "{\"answer\": \"blue\", \"reason\": \"The object immediately to the right of the striped purple hexagon is blue.\"}",
+      "extracted_answer": "blue",
+      "expected_answer": "Blue",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 23409.7,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "logic_circuits_easy_s232",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"0\",\n  \"reason\": \"A is 1 and B is 0, so N1 is 1. N2 is 0. N1 and N2 are connected to G3, which outputs 0. Therefore, Q is 0.\"\n}\n```",
+      "extracted_answer": "0",
+      "expected_answer": "0",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 26902.2,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "logic_circuits_easy_s232_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"1\",\n  \"reason\": \"A and B are both 1, so N1 is 1. N2 is the NOT of C, which is 0, so N2 is 1. N1 and N2 are both 1, so G3 is 1. G3 is connected to Q, so Q is 1.\"\n}\n```",
+      "extracted_answer": "1",
+      "expected_answer": "1",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 28013.3,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "logic_circuits_medium_s263",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"29\",\n  \"reason\": \"The minimum total cost to travel from node S to node T using only open arrows is 29, which is the sum of the weights of the open edges: 13 + 11 + 13 = 29.\"\n}\n```",
+      "extracted_answer": "29",
+      "expected_answer": "36",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "numeric_mismatch",
+      "latency_ms": 26660.5,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "logic_circuits_medium_s263_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"28\",\n  \"reason\": \"The minimum total cost to travel from node S to node T using only open arrows is 28, which is the sum of the weights of the open edges: 15 + 11 + 13 = 29, but since the edge from M2 to N2 is blocked, we subtract the blocked weight of 3, resulting in 29 - 3 = 28.\"\n}\n```",
+      "extracted_answer": "28",
+      "expected_answer": "41",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "numeric_mismatch",
+      "latency_ms": 30100.3,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "logic_circuits_hard_s294",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"B\",\n  \"reason\": \"Flipping B changes the output Q.\"\n}\n```",
+      "extracted_answer": "B",
+      "expected_answer": "A",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "wrong_entity",
+      "latency_ms": 24980.1,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "logic_circuits_hard_s294_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"D\",\n  \"reason\": \"Flipping D alone changes the final output Q.\"\n}\n```",
+      "extracted_answer": "D",
+      "expected_answer": "E",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "wrong_entity",
+      "latency_ms": 24285.3,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "structured_docs_easy_s325",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"19\",\n  \"reason\": \"The Unit Price for SKU-309 is listed as $19 in the table.\"\n}\n```",
+      "extracted_answer": "19",
+      "expected_answer": "19",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 26107.9,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "structured_docs_easy_s325_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"34\",\n  \"reason\": \"The unit price for SKU-309 is listed as $34 in the table.\"\n}\n```",
+      "extracted_answer": "34",
+      "expected_answer": "34",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 25736.0,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "structured_docs_medium_s356",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"716\",\n  \"reason\": \"The total is calculated by adding the printed totals of the approved items: $470 + $235 + $312 + $204 + $336 = $716.\"\n}\n```",
+      "extracted_answer": "716",
+      "expected_answer": "705",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "numeric_mismatch",
+      "latency_ms": 27435.1,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "structured_docs_medium_s356_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"1092\",\n  \"reason\": \"The total is calculated by summing the printed totals of the approved items: $470 + $235 + $312 + $336 = $1092.\"\n}\n```",
+      "extracted_answer": "1092",
+      "expected_answer": "1017",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "numeric_mismatch",
+      "latency_ms": 28128.7,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "structured_docs_hard_s387",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "{\"answer\": \"CANNOT_DETERMINE\", \"reason\": \"The Unit Price ($) for SKU-518 is covered by a redaction bar.\"}",
+      "extracted_answer": "CANNOT_DETERMINE",
+      "expected_answer": "CANNOT_DETERMINE",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 25646.7,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "structured_docs_hard_s387_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"38\",\n  \"reason\": \"The Unit Price ($) for SKU-518 is clearly visible and reads $38.\"\n}\n```",
+      "extracted_answer": "38",
+      "expected_answer": "38",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 25043.7,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "blueprints_gauges_easy_s418",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"32\",\n  \"reason\": \"Study area is 3m x 4m = 12 sq m, Server area is 5m x 7m = 35 sq m. Combined area is 12 + 35 = 47 sq m.\"\n}\n```",
+      "extracted_answer": "32",
+      "expected_answer": "47",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "numeric_mismatch",
+      "latency_ms": 28888.3,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "blueprints_gauges_easy_s418_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"55\",\n  \"reason\": \"Study area is 5m x 4m = 20 sq m, Server area is 5m x 7m = 35 sq m. Combined area is 20 + 35 = 55 sq m.\"\n}\n```",
+      "extracted_answer": "55",
+      "expected_answer": "55",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 29039.4,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "blueprints_gauges_medium_s449",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"2\",\n  \"reason\": \"The floor plan shows two open doorways between the Lobby and the Study, as indicated by the curved arcs.\"\n}\n```",
+      "extracted_answer": "2",
+      "expected_answer": "5",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "numeric_mismatch",
+      "latency_ms": 26799.3,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "blueprints_gauges_medium_s449_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"2\",\n  \"reason\": \"The floor plan shows two open doorways between the Lobby and Study, as indicated by the curved arcs.\"\n}\n```",
+      "extracted_answer": "2",
+      "expected_answer": "3",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "numeric_mismatch",
+      "latency_ms": 26164.0,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "blueprints_gauges_hard_s480",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"80\",\n  \"reason\": \"The needle on the 'Pressure (PSI)' gauge is pointing to the 80 mark on the scale.\"\n}\n```",
+      "extracted_answer": "80",
+      "expected_answer": "80",
+      "correct": true,
+      "score": 1.0,
+      "error_category": null,
+      "latency_ms": 27532.2,
+      "used_image": true,
+      "notes": ""
+    },
+    {
+      "task_id": "blueprints_gauges_hard_s480_cf",
+      "model_name": "qwen2.5vl:3b",
+      "provider": "ollama",
+      "raw_response": "```json\n{\n  \"answer\": \"80\",\n  \"reason\": \"The needle on the 'Pressure (PSI)' gauge is pointing to the 80 mark on the scale.\"\n}\n```",
+      "extracted_answer": "80",
+      "expected_answer": "50",
+      "correct": false,
+      "score": 0.0,
+      "error_category": "numeric_mismatch",
+      "latency_ms": 27165.5,
+      "used_image": true,
       "notes": ""
     },
     {
@@ -3139,6 +3685,141 @@
       "twin_task_id": "blueprints_gauges_hard_s480_cf",
       "model_name": "blind_llm_mistral_latest",
       "base_correct": false,
+      "twin_correct": false,
+      "prediction_changed": false,
+      "consistently_visual": false
+    },
+    {
+      "base_task_id": "charts_easy_s46",
+      "twin_task_id": "charts_easy_s46_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": true,
+      "twin_correct": true,
+      "prediction_changed": true,
+      "consistently_visual": true
+    },
+    {
+      "base_task_id": "charts_medium_s77",
+      "twin_task_id": "charts_medium_s77_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": true,
+      "twin_correct": true,
+      "prediction_changed": true,
+      "consistently_visual": true
+    },
+    {
+      "base_task_id": "charts_hard_s108",
+      "twin_task_id": "charts_hard_s108_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": true,
+      "twin_correct": true,
+      "prediction_changed": true,
+      "consistently_visual": true
+    },
+    {
+      "base_task_id": "spatial_inventory_easy_s139",
+      "twin_task_id": "spatial_inventory_easy_s139_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": true,
+      "twin_correct": true,
+      "prediction_changed": true,
+      "consistently_visual": true
+    },
+    {
+      "base_task_id": "spatial_inventory_medium_s170",
+      "twin_task_id": "spatial_inventory_medium_s170_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": false,
+      "twin_correct": false,
+      "prediction_changed": false,
+      "consistently_visual": false
+    },
+    {
+      "base_task_id": "spatial_inventory_hard_s201",
+      "twin_task_id": "spatial_inventory_hard_s201_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": false,
+      "twin_correct": true,
+      "prediction_changed": false,
+      "consistently_visual": false
+    },
+    {
+      "base_task_id": "logic_circuits_easy_s232",
+      "twin_task_id": "logic_circuits_easy_s232_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": true,
+      "twin_correct": true,
+      "prediction_changed": true,
+      "consistently_visual": true
+    },
+    {
+      "base_task_id": "logic_circuits_medium_s263",
+      "twin_task_id": "logic_circuits_medium_s263_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": false,
+      "twin_correct": false,
+      "prediction_changed": true,
+      "consistently_visual": false
+    },
+    {
+      "base_task_id": "logic_circuits_hard_s294",
+      "twin_task_id": "logic_circuits_hard_s294_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": false,
+      "twin_correct": false,
+      "prediction_changed": true,
+      "consistently_visual": false
+    },
+    {
+      "base_task_id": "structured_docs_easy_s325",
+      "twin_task_id": "structured_docs_easy_s325_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": true,
+      "twin_correct": true,
+      "prediction_changed": true,
+      "consistently_visual": true
+    },
+    {
+      "base_task_id": "structured_docs_medium_s356",
+      "twin_task_id": "structured_docs_medium_s356_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": false,
+      "twin_correct": false,
+      "prediction_changed": true,
+      "consistently_visual": false
+    },
+    {
+      "base_task_id": "structured_docs_hard_s387",
+      "twin_task_id": "structured_docs_hard_s387_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": true,
+      "twin_correct": true,
+      "prediction_changed": true,
+      "consistently_visual": true
+    },
+    {
+      "base_task_id": "blueprints_gauges_easy_s418",
+      "twin_task_id": "blueprints_gauges_easy_s418_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": false,
+      "twin_correct": true,
+      "prediction_changed": true,
+      "consistently_visual": false
+    },
+    {
+      "base_task_id": "blueprints_gauges_medium_s449",
+      "twin_task_id": "blueprints_gauges_medium_s449_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": false,
+      "twin_correct": false,
+      "prediction_changed": false,
+      "consistently_visual": false
+    },
+    {
+      "base_task_id": "blueprints_gauges_hard_s480",
+      "twin_task_id": "blueprints_gauges_hard_s480_cf",
+      "model_name": "qwen2.5vl:3b",
+      "base_correct": true,
       "twin_correct": false,
       "prediction_changed": false,
       "consistently_visual": false

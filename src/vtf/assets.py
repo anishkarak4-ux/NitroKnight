@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import matplotlib
@@ -46,6 +47,10 @@ def generate_slide_assets(
             spot_path = out / "failure_spotlight.png"
             if _draw_failure_spotlight(Path(samples_dir), summary, tasks, spot_path):
                 generated.append(spot_path)
+
+    rob_path = out / "robustness_and_scale.png"
+    if _draw_robustness_and_scale_chart(Path(samples_dir), rob_path):
+        generated.append(rob_path)
 
     return generated
 
@@ -214,30 +219,32 @@ def _draw_families_collage(images_dir: Path, out_path: Path) -> bool:
 def _draw_baseline_chart(summary: BenchmarkSummary, out_path: Path) -> None:
     models = summary.models_evaluated
     acc = [summary.overall_accuracy.get(m, 0.0) * 100 for m in models]
+    att = [summary.attempted_accuracy.get(m, summary.overall_accuracy.get(m, 0.0)) * 100 for m in models]
     cf = [summary.counterfactual_consistency.get(m, 0.0) * 100 for m in models]
 
     x = np.arange(len(models))
-    width = 0.34
-    fig_w = max(9.6, 1.9 * len(models))
-    fig, ax = plt.subplots(figsize=(fig_w, 5.1), dpi=130)
+    width = 0.27
+    fig_w = max(10.8, 1.95 * len(models))
+    fig, ax = plt.subplots(figsize=(fig_w, 5.2), dpi=130)
     try:
         fig.patch.set_facecolor("#FFFFFF")
         ax.set_facecolor("#F8FAFC")
-        b1 = ax.bar(x - width / 2, acc, width, label="Overall Accuracy (%)", color="#2563EB", zorder=3)
-        b2 = ax.bar(x + width / 2, cf, width, label="Counterfactual Consistency (%)", color="#0D9488", zorder=3)
-        ax.set_ylim(0, 120)
+        b1 = ax.bar(x - width, acc, width, label="Strict Accuracy (%)", color="#2563EB", zorder=3)
+        b2 = ax.bar(x, att, width, label="Attempted Accuracy (excl. 429)", color="#0284C7", hatch="//", alpha=0.88, zorder=3)
+        b3 = ax.bar(x + width, cf, width, label="Counterfactual Consistency (%)", color="#0D9488", zorder=3)
+        ax.set_ylim(0, 122)
         ax.set_ylabel("Score (%)")
-        ax.set_title("Blind Baselines & Real LLM Audit vs Multimodal Models", fontsize=13, fontweight="bold")
+        ax.set_title("Blind Baselines & Local VLM vs Frontier Models (Strict, Attempted & CF)", fontsize=12.5, fontweight="bold")
         ax.set_xticks(x)
-        ax.set_xticklabels(models, fontsize=8.8, rotation=16 if len(models) > 3 else 0, ha="right" if len(models) > 3 else "center")
+        ax.set_xticklabels(models, fontsize=8.4, rotation=18 if len(models) > 3 else 0, ha="right" if len(models) > 3 else "center")
         ax.yaxis.grid(True, linestyle="--", alpha=0.6, zorder=0)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        for bars in (b1, b2):
+        for bars in (b1, b2, b3):
             for bar in bars:
                 v = bar.get_height()
-                ax.text(bar.get_x() + bar.get_width() / 2, v + 1.8, f"{v:.1f}%", ha="center", va="bottom", fontsize=8, fontweight="bold")
-        ax.legend(loc="upper left", frameon=True)
+                ax.text(bar.get_x() + bar.get_width() / 2, v + 1.5, f"{v:.0f}%", ha="center", va="bottom", fontsize=7.2, fontweight="bold")
+        ax.legend(loc="upper left", ncol=3, fontsize=8.5, frameon=True)
         fig.tight_layout()
         fig.savefig(out_path, dpi=130)
     finally:
@@ -257,18 +264,17 @@ def _draw_family_breakdown_chart(summary: BenchmarkSummary, out_path: Path) -> N
         "blueprints_gauges": "Blueprints/Gauges",
     }
     fam_labels = [label_map.get(f, f) for f in families]
-    palette = ["#64748B", "#94A3B8", "#A855F7", "#0EA5E9", "#2563EB", "#0D9488"]
+    palette = ["#64748B", "#94A3B8", "#A855F7", "#F59E0B", "#0EA5E9", "#2563EB"]
 
     x = np.arange(len(families))
     n = len(models)
-    width = min(0.18, 0.80 / max(1, n))
+    width = min(0.145, 0.86 / max(1, n))
 
-    fig, ax = plt.subplots(figsize=(11.2, 5.2), dpi=130)
+    fig, ax = plt.subplots(figsize=(11.8, 5.2), dpi=130)
     try:
         err_counts: dict[tuple[str, str], int] = {}
         tot_counts: dict[tuple[str, str], int] = {}
         for pred in summary.predictions:
-            fam_prefix = pred.task_id.split("_")[0]
             # Map task_id prefix back to canonical family name
             for cand in families:
                 if pred.task_id.startswith(cand):
@@ -288,7 +294,7 @@ def _draw_family_breakdown_chart(summary: BenchmarkSummary, out_path: Path) -> N
                 errs = err_counts.get((m, f_name), 0)
                 tots = tot_counts.get((m, f_name), 0)
                 lbl = "429*" if (tots > 0 and errs == tots) else (f"{v:.0f}%*" if errs > 0 else f"{v:.0f}%")
-                ax.text(b.get_x() + b.get_width() / 2, v + 1.5, lbl, ha="center", va="bottom", fontsize=7, fontweight="bold")
+                ax.text(b.get_x() + b.get_width() / 2, v + 1.5, lbl, ha="center", va="bottom", fontsize=6.4, fontweight="bold")
         ax.set_ylim(0, 118)
         ax.set_ylabel("Accuracy (%)")
         ax.set_title("Where Multimodal Models Succeed vs Struggle (*429 = free-tier API quota cap)", fontsize=12.0, fontweight="bold", pad=46)
@@ -328,21 +334,31 @@ def _draw_failure_spotlight(
     if not real_fails:
         return False
 
-    # Prefer distinct families and hard/complex spotlight failures
+    # Prefer distinct families AND distinct VLM tiers (frontier Flash vs open-weights Qwen vs Flash-Lite)
     picks = []
     seen_families: set[str] = set()
+    seen_models: set[str] = set()
+
+    def _model_rank(mname: str) -> int:
+        if mname == "gemini-3.5-flash":
+            return 0
+        if "qwen" in mname.lower():
+            return 1
+        return 2
+
     prioritized = sorted(
         real_fails,
         key=lambda p: (
+            _model_rank(p.model_name),
             0 if "hard" in p.task_id else (1 if "medium" in p.task_id else 2),
-            0 if "flash-lite" not in p.model_name else 1,
         ),
     )
     for p in prioritized:
         fam = task_map[p.task_id].family.value
-        if fam not in seen_families:
+        if fam not in seen_families and p.model_name not in seen_models:
             picks.append(p)
             seen_families.add(fam)
+            seen_models.add(p.model_name)
         if len(picks) == 2:
             break
     for p in prioritized:
@@ -385,4 +401,63 @@ def _draw_failure_spotlight(
                 canvas.paste(thumb, (tx, ty))
 
     canvas.save(out_path)
+    return True
+
+
+def _draw_robustness_and_scale_chart(samples_dir: Path, out_path: Path) -> bool:
+    rob_p = samples_dir / "robustness_report.json"
+    scale_p = samples_dir / "scale_report.json"
+    if not rob_p.exists() and not scale_p.exists():
+        return False
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.4, 4.6), dpi=130, gridspec_kw={"width_ratios": [1.25, 1.0]})
+    try:
+        fig.patch.set_facecolor("#FFFFFF")
+        if rob_p.exists():
+            rob = json.loads(rob_p.read_text(encoding="utf-8"))
+            regimes = [
+                ("Clean\nDigital", rob["clean"]["accuracy"] * 100),
+                ("Scan Tilt\n(+/-2 deg, Q76)", rob["scan_tilt"]["accuracy"] * 100),
+                ("Low Contrast\n+ Noise (Q38)", rob["low_contrast_jpeg"]["accuracy"] * 100),
+            ]
+            labels = [r[0] for r in regimes]
+            vals = [r[1] for r in regimes]
+            colors = ["#2563EB", "#0EA5E9", "#E11D48"]
+            ax1.set_facecolor("#F8FAFC")
+            bars = ax1.bar(np.arange(len(labels)), vals, width=0.52, color=colors, zorder=3)
+            ax1.set_ylim(0, 105)
+            ax1.set_ylabel("Accuracy (%)")
+            ax1.set_title(f"Scan & Noise Robustness ({rob.get('model', 'VLM')}, N=10)", fontsize=11, fontweight="bold")
+            ax1.set_xticks(np.arange(len(labels)))
+            ax1.set_xticklabels(labels, fontsize=9)
+            ax1.yaxis.grid(True, linestyle="--", alpha=0.6, zorder=0)
+            ax1.spines["top"].set_visible(False)
+            ax1.spines["right"].set_visible(False)
+            for b in bars:
+                v = b.get_height()
+                ax1.text(b.get_x() + b.get_width() / 2, v + 2.0, f"{v:.0f}%", ha="center", va="bottom", fontsize=9.5, fontweight="bold")
+
+        ax2.axis("off")
+        if scale_p.exists():
+            sc = json.loads(scale_p.read_text(encoding="utf-8"))
+            ax2.set_title("Large-Scale Factory Stress Telemetry", fontsize=11, fontweight="bold")
+            lines = [
+                ("Valid Tasks Synthesized", f"{sc['valid_tasks']} (5 Families x 3 Tiers)"),
+                ("Counterfactual Twins", f"{sc['counterfactual_pairs']} Verified Pairs"),
+                ("Gate 1-5 Pass Rate", f"{sc['validation_pass_rate']*100:.1f}% (0 rejected)"),
+                ("Unique PNG SHA-256", f"{sc['unique_image_sha256']} / {sc['valid_tasks']} (0 collisions)"),
+                ("Total Generation Time", f"{sc['elapsed_sec']} sec (CPU only)"),
+                ("Sustained Throughput", f"{sc['throughput_tasks_per_sec']} tasks / sec"),
+            ]
+            ax2.add_patch(plt.Rectangle((0.02, 0.05), 0.96, 0.88, facecolor="#EFF6FF", edgecolor="#2563EB", linewidth=2, transform=ax2.transAxes))
+            y_pos = 0.82
+            for k, v in lines:
+                ax2.text(0.08, y_pos, f"{k}:", fontsize=9.5, fontweight="bold", color="#1E293B", transform=ax2.transAxes)
+                ax2.text(0.92, y_pos, v, fontsize=9.5, fontweight="bold", color="#1D4ED8", ha="right", transform=ax2.transAxes)
+                y_pos -= 0.135
+
+        fig.tight_layout()
+        fig.savefig(out_path, dpi=130)
+    finally:
+        plt.close(fig)
     return True

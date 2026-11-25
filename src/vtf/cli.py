@@ -12,6 +12,8 @@ from vtf.benchmark import run_benchmark
 from vtf.factory import TaskFactory
 from vtf.families import get_family
 from vtf.mutation import run_mutation_suite, save_mutation_report
+from vtf.perturbations import PERTURBATION_MODES, perturb_dataset
+from vtf.scale import run_scale_benchmark
 from vtf.validator import validate_task
 
 
@@ -59,6 +61,18 @@ def main(argv: list[str] | None = None) -> int:
 
     p_mut = sub.add_parser("mutate", help="Run mutation testing to verify validator fault detection")
     p_mut.add_argument("--out", default=None, help="Optional JSON file path to save mutation report")
+
+    p_pert = sub.add_parser("perturb", help="Generate scan/camera-perturbed robustness suite & optionally benchmark")
+    p_pert.add_argument("--dataset", default="samples/demo_suite", help="Source dataset directory")
+    p_pert.add_argument("--out", default="outputs/perturbed_suite", help="Perturbed dataset output directory")
+    p_pert.add_argument("--mode", choices=list(PERTURBATION_MODES), default="scan_tilt")
+    p_pert.add_argument("--limit", type=int, default=None, help="Optional max tasks to perturb")
+    p_pert.add_argument("--evaluate-models", default=None, help="Optional comma-separated models to benchmark")
+
+    p_scale = sub.add_parser("stress-test", help="Benchmark large-scale factory throughput & zero-collision validity")
+    p_scale.add_argument("--per-cell", type=int, default=5, help="Tasks per (family x difficulty)")
+    p_scale.add_argument("--seed", type=int, default=100, help="Base deterministic seed")
+    p_scale.add_argument("--out", default=None, help="Optional JSON report file path")
 
     args = parser.parse_args(argv)
 
@@ -143,6 +157,21 @@ def main(argv: list[str] | None = None) -> int:
         rep = save_mutation_report(args.out) if args.out else run_mutation_suite()
         print(json.dumps(rep, indent=2))
         return 0 if rep["all_killed"] else 1
+
+    if args.cmd == "perturb":
+        res = perturb_dataset(args.dataset, args.out, mode=args.mode, limit=args.limit)
+        if args.evaluate_models:
+            specs = [m.strip() for m in args.evaluate_models.split(",") if m.strip()]
+            bench = run_benchmark(args.out, specs, verbose=True)
+            res["benchmark_accuracy"] = bench.overall_accuracy
+            res["attempted_accuracy"] = bench.attempted_accuracy
+        print(json.dumps(res, indent=2))
+        return 0
+
+    if args.cmd == "stress-test":
+        rep = run_scale_benchmark(per_cell=args.per_cell, base_seed=args.seed, out_path=args.out)
+        print(json.dumps(rep, indent=2))
+        return 0 if rep["zero_hash_collisions"] else 1
 
     return 1
 

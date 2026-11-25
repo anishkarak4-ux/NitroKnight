@@ -48,20 +48,20 @@ Make a copy of the Google Slides template, replace the placeholder text with eac
   2. Render image + exact `SceneManifest` pixel bounding boxes & independently compute verified answer + `solver_trace`.
   3. Filter through **5 Validation Gates** (bounds, overlap/readability, strict Q/A grounding, independent solver cross-check, anti-shortcut leakage) + generate counterfactual twin `*_cf`.
   4. Benchmark multimodal VLMs & blind audits with resumable caching → emit `Accuracy × Family × Difficulty`, Counterfactual Consistency, Hallucination Rate, and standalone MD/JSON/HTML reports.
-- **Key Empirical Findings (`samples/demo_suite`, 30 tasks):**
-  - `blind_text_prior` / `pixel_cv_heuristic`: **10.0%** / **6.7%** overall (**0.0%** counterfactual consistency).
-  - `blind_llm_mistral_latest` (local Ollama `mistral:latest` 7B without images): **0.0%** overall (**0/30**, **0.0%** counterfactual consistency) — live LLM proof of zero text-only cheating.
-  - `gemini-3.5-flash-lite` (`30/30`, **0 API errors**): **83.3%** overall (**73.3%** CF consistency, **0.0%** hallucination rate on abstention), acing Charts, Spatial & Redacted Docs (`100%`), while struggling on Blueprint doorway hops (`66.7%`) & Circuits (`50.0%`).
-  - `gemini-3.5-flash`: **70.0%** overall (**21/22 = 95.5%** on valid calls before hitting free-tier `429` daily cap on #23–30; solved medium Circuits/DAGs yet STILL failed dense 5-pin crossing schematic `logic_circuits_hard_s294_cf`, predicting `B` instead of `E`).
+- **Key Empirical Findings (`samples/demo_suite`, 30 tasks + 7-model evaluation):**
+  - `blind_text_prior` / `pixel_cv_heuristic` / `blind_llm_mistral_latest`: **10.0%** / **6.7%** / **0.0%** overall (**0.0%** counterfactual consistency) — proves zero text-only cheating across both heuristic priors and a local 7B LLM.
+  - `qwen2.5vl:3b` (Open-Weights Local 3B VLM via Ollama, `0` errors): **56.7%** overall (**17/30**, **46.7%** CF consistency, Wilson 95% CI `[39.2%, 72.6%]`, **0.0%** hallucination rate) — aces Charts (`100%`) & Redacted Abstention, struggles on Spatial (`50%`), Circuits (`33.3%`) & Blueprints/Gauges (`33.3%`).
+  - `gemini-3.5-flash-lite` (`30/30`, **0 API errors**): **83.3%** overall (**25/30**, **73.3%** CF consistency, Wilson 95% CI `[66.4%, 92.7%]`, **0.0%** hallucination rate), acing Charts, Spatial & Docs (`100%`), while struggling on Blueprint doorway hops (`66.7%`) & Circuits (`50.0%`). Under perturbations (`N=10`): Clean **70.0%** -> Scan Tilt **70.0%** -> Low-Contrast Noisy JPEG **60.0%**.
+  - `gemini-3.5-flash`: **70.0%** strict / **95.5% attempted (`21/22`)** (Wilson 95% CI `[78.2%, 99.2%]`, **66.7%** CF consistency; #23–30 hit free-tier `429` daily cap) — solved Flash-Lite's medium Circuits/DAGs, yet ALL 3 real VLMs failed 5-pin crossing schematic `logic_circuits_hard_s294_cf` (predicting `D`/`C`/`B` vs `E`).
 
 ---
 
 ## Slide 6 — Wireframes / Mock Diagrams (Studio UI 2.0 Screenshot)
 *(Ready-to-use live capture saved at: `docs/assets/studio_ui_screenshot.png`)*
 - Highlights:
-  - Interactive **Live Generate + 5-Gate Validate** sidebar + **Family / Difficulty / VLM Failures Only** filters.
-  - **Side-by-Side Counterfactual Twin** view + **SVG Grounding Box Overlay** highlighting referenced primitives (blue) and answer evidence (green).
-  - **Per-Model Evaluation Responses** card + **Benchmark Summary Table** (including `Hallucination` and `Blueprints` columns).
+  - Interactive **Live Generate + 5-Gate Validate** sidebar + **Family / Difficulty / VLM Failures Only** filters + **`Full HTML Report ↗`** (`/report`).
+  - **Side-by-Side Counterfactual Twin** view + **SVG Grounding Box Overlay** + **Live Single-Task VLM Probe** (`/api/evaluate-one`).
+  - **Per-Model Evaluation Responses** card + **Benchmark Summary Table** (`Strict`, `Attempted`, `95% CI`, `CF Consistency`, `Hallucination`, and 5 families).
 
 ---
 
@@ -75,20 +75,21 @@ Make a copy of the Google Slides template, replace the placeholder text with eac
 - **Core Pipeline:** Python 3.12, Pydantic v2, Matplotlib (Agg renderer extents), Pillow (5-pin bridge schematics, floorplans, dial gauges, bundled TrueType typography), NumPy.
 - **API & Interactive Studio 2.0:** FastAPI, Uvicorn, HTTPX, HTML5/SVG Grounding Overlay, standalone HTML report generator.
 - **Model Adapters & Blind LLM Audit:** Google Gemini REST, OpenAI-compatible Vision APIs (OpenAI / OpenRouter / Groq), Local Ollama Vision & Text Blind Auditor (`ollama_blind:mistral:latest`).
-- **Verification & CI:** `pytest` (`22/22` tests), 9-mutant Fault-Injection Suite (`vtf mutate`), `.github/workflows/ci.yml`, and **Docker** (`Dockerfile`).
+- **Verification & CI:** `pytest` (`25/25` tests), 9-mutant Fault-Injection Suite (`vtf mutate`), 150-task zero-collision scale suite (`vtf stress-test`), `.github/workflows/ci.yml` (`verify` + `docker` jobs), and **Docker** (`Dockerfile`).
 
 ---
 
 ## Slide 9 — Estimated Implementation Cost
-- **Pipeline, Blind LLM Audit & Verification Cost:** **$0** — synthesis, 5-gate validation, mutation testing, counterfactual twins, and local Ollama `mistral:latest` blind auditing run 100% on local CPU/GPU.
-- **Model Evaluation Cost:** **$0** during prototyping via free Google AI Studio tier and local Ollama; resumable `predictions_cache.jsonl` avoids re-paying completed calls when scaling with finalist credits.
+*(Insert images: `docs/assets/validation_and_baselines.png` & `docs/assets/robustness_and_scale.png`)*
+- **Pipeline, Blind LLM, Local VLM & Scale Cost:** **$0** — synthesis (150 tasks in 9.16s), 5-gate validation, perturbations, mutation testing, Ollama `mistral:latest` blind audit, and local `qwen2.5vl:3b` inference all run 100% locally.
+- **Cloud Evaluation Cost:** **$0** during prototyping via free Google AI Studio tier; resumable `predictions_cache.jsonl` avoids re-paying completed calls when scaling with finalist credits.
 
 ---
 
 ## Slide 10 — Hackathon Deliverables Checklist
-- **Runnable Source Code, Docker & CI:** `https://github.com/anishkarak4-ux/NitroKnight` (includes `Dockerfile`, `.github/workflows/ci.yml`, `pyproject.toml`, `README.md`).
-- **Sample Outputs:** Committed under `samples/demo_suite/` (30 validated PNG tasks, JSONL specs, manifests, `benchmark_report.{md,json,html}`, and `predictions_cache.jsonl`).
-- **Validation Evidence:** `pytest` suite (`22/22` pass), `vtf validate` (`30/30`), `samples/demo_suite/mutation_report.json` (`9/9` killed), and live benchmark results contrasting blind priors (`10.0%` / `0.0%`) vs Gemini (`83.3%` Flash-Lite / `21/22` valid Flash) vs Oracle (`100%`).
+- **Runnable Source Code, Docker & Green CI:** `https://github.com/anishkarak4-ux/NitroKnight` (includes `Dockerfile`, `.github/workflows/ci.yml`, `pyproject.toml`, `README.md`).
+- **Sample Outputs:** Committed under `samples/demo_suite/` (30 validated PNG tasks, JSONL specs, `benchmark_report.{md,json,html}`, `scale_report.json` [150 tasks], `robustness_report.json`, `predictions_cache.jsonl`).
+- **Validation Evidence:** `pytest` suite (`25/25` pass), `vtf validate` (`30/30`), `vtf stress-test` (`150/150` pass, `0` hash collisions), `samples/demo_suite/mutation_report.json` (`9/9` killed), and 7-model capability ladder (`0.0%` blind -> `56.7%` Qwen2.5-VL 3B -> `83.3%` Flash-Lite -> `95.5%` attempted Flash -> `100%` Oracle).
 - **Technical Explanation & Live Demo:** `docs/ARCHITECTURE.md` + 3–4 minute walkthrough video (`docs/DEMO_SCRIPT.md`).
 
 ---

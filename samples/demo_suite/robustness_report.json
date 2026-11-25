@@ -1,0 +1,42 @@
+{
+  "subset_tasks": [
+    "charts_medium_s77",
+    "charts_medium_s77_cf",
+    "spatial_inventory_medium_s170",
+    "spatial_inventory_medium_s170_cf",
+    "logic_circuits_medium_s263",
+    "logic_circuits_medium_s263_cf",
+    "structured_docs_medium_s356",
+    "structured_docs_medium_s356_cf",
+    "blueprints_gauges_medium_s449",
+    "blueprints_gauges_medium_s449_cf"
+  ],
+  "model": "gemini-3.5-flash-lite",
+  "clean": {
+    "accuracy": 0.7,
+    "correct": 7,
+    "total": 10
+  },
+  "scan_tilt": {
+    "valid_perturbed_tasks": 10,
+    "accuracy": 0.7,
+    "attempted_accuracy": 0.7,
+    "attempted_counts": "7/10",
+    "counterfactual_consistency": 0.6,
+    "wilson_ci_95": [
+      0.3968,
+      0.8922
+    ]
+  },
+  "low_contrast_jpeg": {
+    "valid_perturbed_tasks": 10,
+    "accuracy": 0.6,
+    "attempted_accuracy": 0.6,
+    "attempted_counts": "6/10",
+    "counterfactual_consistency": 0.6,
+    "wilson_ci_95": [
+      0.3127,
+      0.8318
+    ]
+  }
+}

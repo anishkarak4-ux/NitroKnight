@@ -41,9 +41,40 @@ class EvaluateRequest(BaseModel):
     limit: int | None = None
 
 
+class EvaluateOneRequest(BaseModel):
+    task_id: str
+    model: str = "oracle"
+
+
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
     return STUDIO_HTML
+
+
+@app.get("/report", response_class=HTMLResponse)
+def html_report() -> HTMLResponse:
+    report_path = _dataset_dir() / "benchmark_report.html"
+    if not report_path.exists():
+        return HTMLResponse(
+            "<h2>No benchmark_report.html found yet. Run <code>vtf evaluate</code> first.</h2>",
+            status_code=404,
+        )
+    return HTMLResponse(report_path.read_text(encoding="utf-8"))
+
+
+@app.post("/api/evaluate-one")
+def evaluate_single_task(req: EvaluateOneRequest) -> dict[str, Any]:
+    ds = _dataset_dir()
+    tasks = TaskFactory.load_tasks(ds)
+    match = next((t for t in tasks if t.task_id == req.task_id), None)
+    if match is None:
+        raise HTTPException(status_code=404, detail=f"Task '{req.task_id}' not found.")
+    try:
+        ev = build_evaluator(req.model)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    pred = ev.evaluate_task(match, ds)
+    return pred.model_dump(mode="json")
 
 
 @app.get("/api/tasks")
@@ -63,6 +94,7 @@ def list_tasks() -> dict[str, Any]:
 
 
 @app.get("/api/images/{filename}")
+@app.get("/images/{filename}")
 def get_image(filename: str) -> FileResponse:
     safe_name = Path(filename).name
     path = _dataset_dir() / "images" / safe_name
@@ -152,14 +184,14 @@ STUDIO_HTML = """<!doctype html>
     .task-item .meta { font-size: 0.73rem; color: var(--muted); margin-top: 3px; }
     .viewer-grid { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
     .viewer { position: relative; display: inline-block; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; }
-    .viewer img { display: block; max-width: 100%; height: auto; }
+    .viewer img { display: block; max-width: 100%; max-height: 255px; width: auto; height: auto; }
     .viewer svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
     .gate { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1e293b; font-size: 0.83rem; }
     .badge-ok { color: var(--ok); font-weight: 700; }
     .badge-bad { color: var(--bad); font-weight: 700; }
     pre { background: #0b1020; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.77rem; border: 1px solid var(--border); white-space: pre-wrap; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th, td { border-bottom: 1px solid var(--border); padding: 6px 8px; text-align: left; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.80rem; }
+    th, td { border-bottom: 1px solid var(--border); padding: 4px 8px; text-align: left; }
   </style>
 </head>
 <body>
@@ -167,6 +199,7 @@ STUDIO_HTML = """<!doctype html>
   <h1>Visual Task Factory — Verification &amp; Benchmark Studio</h1>
   <div class="row">
     <span class="pill" id="statsPill">Loading dataset...</span>
+    <a href="/report" target="_blank" style="text-decoration:none;"><button class="secondary" type="button">Full HTML Report ↗</button></a>
     <button class="secondary" onclick="runBaselineEval()">Run Offline Baselines</button>
   </div>
 </header>
@@ -267,6 +300,25 @@ STUDIO_HTML = """<!doctype html>
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="card" id="liveProbeCard">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px;">
+        <div style="font-weight:700;">Live Single-Task VLM Probe</div>
+        <div class="row">
+          <select id="probeModel">
+            <option value="gemini:gemini-3.5-flash-lite">gemini:gemini-3.5-flash-lite</option>
+            <option value="gemini:gemini-3.5-flash">gemini:gemini-3.5-flash</option>
+            <option value="ollama:qwen2.5vl:3b">ollama:qwen2.5vl:3b</option>
+            <option value="ollama_blind:mistral:latest">ollama_blind:mistral:latest</option>
+            <option value="blind_prior">blind_prior</option>
+            <option value="pixel_heuristic">pixel_heuristic</option>
+            <option value="oracle">oracle</option>
+          </select>
+          <button id="probeBtn" type="button" onclick="runSingleProbe()">Evaluate Selected Task Live</button>
+        </div>
+      </div>
+      <div id="liveProbeOut" style="font-size:0.83rem;color:var(--muted);">Select a model and click "Evaluate Selected Task Live" to test it directly against this image and symbolic verifier.</div>
     </div>
 
     <div class="card" id="taskPredsCard" style="display:none;">
@@ -421,16 +473,49 @@ function renderReport() {
   const rows = (r.models_evaluated || []).map(m => {
     const fam = r.by_family[m] || {};
     const hr = r.hallucination_rate?.[m];
+    const att = r.attempted_accuracy?.[m] ?? r.overall_accuracy[m] ?? 0;
+    const cnt = r.attempted_counts?.[m] || '-';
+    const ci = r.wilson_ci_95?.[m];
+    const ciTxt = ci ? `[${(ci[0]*100).toFixed(0)}%, ${(ci[1]*100).toFixed(0)}%]` : '-';
     const fCells = fams.map(f => `<td>${fam[f] !== undefined ? (fam[f]*100).toFixed(0)+'%' : '-'}</td>`).join('');
     return `<tr><td><code>${m}</code></td>
       <td>${((r.overall_accuracy[m]||0)*100).toFixed(1)}%</td>
+      <td><strong>${(att*100).toFixed(1)}%</strong> (${cnt})</td>
+      <td>${ciTxt}</td>
       <td>${((r.counterfactual_consistency[m]||0)*100).toFixed(1)}%</td>
       <td>${hr !== undefined ? (hr*100).toFixed(0)+'%' : 'N/A'}</td>
       ${fCells}</tr>`;
   }).join('');
   document.getElementById('evalSummary').innerHTML = `<table>
-    <thead><tr><th>Model</th><th>Overall</th><th>CF Consistency</th><th>Hallucination</th><th>Charts</th><th>Spatial</th><th>Circuits</th><th>Docs</th><th>Blueprints</th></tr></thead>
+    <thead><tr><th>Model</th><th>Strict</th><th>Attempted</th><th>95% CI</th><th>CF Consistency</th><th>Hallucination</th><th>Charts</th><th>Spatial</th><th>Circuits</th><th>Docs</th><th>Blueprints</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
+}
+
+async function runSingleProbe() {
+  if (!STATE.selected) return;
+  const btn = document.getElementById('probeBtn');
+  const out = document.getElementById('liveProbeOut');
+  const model = document.getElementById('probeModel').value;
+  btn.disabled = true;
+  out.textContent = `Running ${model} on ${STATE.selected.task_id}...`;
+  try {
+    const res = await fetch('/api/evaluate-one', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ task_id: STATE.selected.task_id, model })
+    });
+    const p = await res.json();
+    if (!res.ok) {
+      out.innerHTML = `<span class="badge-bad">Error:</span> ${p.detail || 'Evaluation failed'}`;
+      return;
+    }
+    const cls = p.correct ? 'badge-ok' : 'badge-bad';
+    const st = p.correct ? 'PASS' : (p.error_category || 'FAIL');
+    out.innerHTML = `<span class="${cls}">${st}</span> · Model: <code>${p.model_name}</code> · Predicted: <code>${p.extracted_answer || '-'}</code> · Expected: <code>${p.expected_answer}</code> · Latency: ${p.latency_ms}ms
+      <pre style="margin-top:8px;">${(p.raw_response || p.notes || '').replace(/</g,'&lt;').slice(0,500)}</pre>`;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function generateLive() {

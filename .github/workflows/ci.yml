@@ -25,3 +25,13 @@ jobs:
         run: vtf validate --dataset samples/demo_suite
       - name: Run mutation fault-detection suite
         run: vtf mutate
+
+  docker:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and verify Dockerfile submission container
+        run: |
+          docker build -t visual-task-factory .
+          docker run --rm visual-task-factory

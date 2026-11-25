@@ -26,7 +26,8 @@ class TaskFactory:
         difficulty: Difficulty | str,
         seed: int,
         *,
-        max_retries: int = 5,
+        max_retries: int = 8,
+        forbidden_hashes: set[str] | None = None,
     ) -> tuple[TaskPackage, list[dict[str, Any]]]:
         """Generate and validate a single TaskPackage, retrying deterministically on gate failure."""
         family = get_family(family_name)
@@ -38,15 +39,19 @@ class TaskFactory:
             tid = f"{family.family_name.value}_{diff.value}_s{seed}_a{attempt}" if attempt else f"{family.family_name.value}_{diff.value}_s{seed}"
             task = family.build_task(cur_seed, diff, self.images_dir, task_id=tid)
             img_path = self.output_dir / task.image_path
+            dup = forbidden_hashes is not None and task.image_sha256 in forbidden_hashes
             report = validate_task(task, family, img_path)
             task.validation = report
-            if report.valid:
+            if report.valid and not dup:
                 return task, rejected_log
+            reasons = list(report.rejection_reasons)
+            if dup:
+                reasons.append(f"Duplicate image hash {task.image_sha256[:12]}")
             rejected_log.append(
                 {
                     "task_id": task.task_id,
                     "seed": cur_seed,
-                    "reasons": report.rejection_reasons,
+                    "reasons": reasons,
                 }
             )
             # Clean up failed candidate PNG
@@ -73,6 +78,7 @@ class TaskFactory:
 
         tasks: list[TaskPackage] = []
         rejected: list[dict[str, Any]] = []
+        seen_hashes: set[str] = set()
 
         seq = 0
         for fam in fam_list:
@@ -81,7 +87,8 @@ class TaskFactory:
                 for idx in range(per_cell):
                     seed = base_seed + seq * 31
                     seq += 1
-                    base_task, rej = self.generate_one(fam, diff, seed)
+                    base_task, rej = self.generate_one(fam, diff, seed, forbidden_hashes=seen_hashes)
+                    seen_hashes.add(base_task.image_sha256)
                     tasks.append(base_task)
                     rejected.extend(rej)
 
@@ -102,15 +109,22 @@ class TaskFactory:
                             twin_img = self.output_dir / twin_task.image_path
                             twin_report = validate_task(twin_task, family_impl, twin_img)
                             twin_task.validation = twin_report
-                            if twin_report.valid and str(twin_task.answer) != str(base_task.answer):
+                            if (
+                                twin_report.valid
+                                and str(twin_task.answer) != str(base_task.answer)
+                                and twin_task.image_sha256 not in seen_hashes
+                            ):
+                                seen_hashes.add(twin_task.image_sha256)
                                 tasks.append(twin_task)
                             else:
+                                rej_reasons = list(twin_report.rejection_reasons)
+                                if twin_task.image_sha256 in seen_hashes:
+                                    rej_reasons.append("Duplicate counterfactual image hash.")
                                 rejected.append(
                                     {
                                         "task_id": twin_id,
                                         "seed": seed + 17,
-                                        "reasons": twin_report.rejection_reasons
-                                        or ["Counterfactual answer matched base answer."],
+                                        "reasons": rej_reasons or ["Counterfactual answer matched base answer."],
                                     }
                                 )
                                 if twin_img.exists():

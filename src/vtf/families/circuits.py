@@ -612,18 +612,24 @@ class LogicCircuitsTaskFamily(VisualTaskFamily):
         if twin["subtype"] == "boolean_logic_circuit":
             if twin["reasoning_type"] == "circuit_signal_tracing":
                 base_q = _eval_circuit(twin["inputs"], twin["gates"])["Q"]
-                for p in twin["inputs"]:
+                pin_order = list(twin["inputs"].keys())
+                offset = seed % len(pin_order)
+                for p in pin_order[offset:] + pin_order[:offset]:
                     alt = dict(twin["inputs"])
                     alt[p] = 1 - alt[p]
                     if _eval_circuit(alt, twin["gates"])["Q"] != base_q:
                         twin["inputs"] = alt
                         return twin, f"Flipped input pin {p} ({spec['inputs'][p]} -> {alt[p]}), changing Q."
-                # If no single input flips Q, change final gate to NOT-or-XOR-flipped op
+                # If no single input flips Q, cycle through output gate ops until Q flips
                 last_g = twin["gates"][-1]
-                alt_op = "NOR" if last_g["op"] in {"OR", "AND"} else "OR"
-                last_g["op"] = alt_op
-                if _eval_circuit(twin["inputs"], twin["gates"])["Q"] != base_q:
-                    return twin, f"Changed final gate {last_g['id']} to {alt_op}, flipping Q."
+                orig_op = last_g["op"]
+                for alt_op in GATES:
+                    if alt_op == orig_op:
+                        continue
+                    last_g["op"] = alt_op
+                    if _eval_circuit(twin["inputs"], twin["gates"])["Q"] != base_q:
+                        return twin, f"Changed final gate {last_g['id']} from {orig_op} to {alt_op}, flipping Q."
+                last_g["op"] = orig_op
                 return None
 
             # sensitivity counterfactual: switch to a schematic where a different pin is uniquely sensitive

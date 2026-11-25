@@ -285,7 +285,7 @@ class OllamaVisionEvaluator(BaseEvaluator):
         self,
         model_name: str = "qwen2.5vl:3b",
         host: str | None = None,
-        timeout: float = 90.0,
+        timeout: float = 180.0,
     ) -> None:
         self.model_name = model_name
         self.host = (host or os.getenv("OLLAMA_HOST") or "http://localhost:11434").rstrip("/")
